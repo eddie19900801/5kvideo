@@ -1,0 +1,14 @@
+{
+  "name": "5k-video-media-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "types": "wrangler types"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "~5.8.3",
+    "wrangler": "^4.28.1"
+  }
+}

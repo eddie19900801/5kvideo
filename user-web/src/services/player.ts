@@ -1,0 +1,2 @@
+import Hls from 'hls.js';
+export function attachVideo(video:HTMLVideoElement,url:string,options?:{preview?:boolean}){let hls:Hls|null=null;if(url.includes('.m3u8')&&!video.canPlayType('application/vnd.apple.mpegurl')){if(Hls.isSupported()){const preview=options?.preview===true;hls=new Hls({enableWorker:true,lowLatencyMode:false,backBufferLength:preview?2:600,maxBufferLength:preview?4:60,maxMaxBufferLength:preview?6:600});hls.loadSource(url);hls.attachMedia(video)}}else video.src=url;return()=>{hls?.destroy();video.removeAttribute('src');video.load()};}

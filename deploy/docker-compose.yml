@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: video5k
+      POSTGRES_USER: video5k
+      POSTGRES_PASSWORD: change-me
+    volumes: [postgres-data:/var/lib/postgresql/data]
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes: [redis-data:/data]
+volumes:
+  postgres-data:
+  redis-data:

@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "5k-video-media",
+  "account_id": "cdea056757c6efbef4ada12543f9cb12",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "secrets": { "required": ["UPLOAD_SECRET"] },
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "5kag" }],
+  "observability": { "enabled": true, "head_sampling_rate": 1 }
+}

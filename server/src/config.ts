@@ -15,5 +15,5 @@ export const config = Object.freeze({
   r2UploadSecret: process.env.R2_UPLOAD_SECRET || '',
   r2WorkerOrigin: (process.env.R2_WORKER_ORIGIN || 'https://media.5k.ag').replace(/\/$/, ''),
   r2Bucket: process.env.R2_BUCKET || '5kag',
+  coverEncryptionSecret: process.env.COVER_ENCRYPTION_KEY || process.env.JWT_SECRET || 'dev-cover-encryption-secret',
 });
-

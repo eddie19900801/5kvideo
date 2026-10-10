@@ -4,6 +4,7 @@ import { useVideo } from '@/contexts/VideoContext';
 import { useNavigate } from 'react-router-dom';
 import { attachVideo } from '@/services/player';
 import { track } from '@/services/analytics';
+import { EncryptedCover, useEncryptedCover } from './EncryptedCover';
 
 interface VideoCardProps {
   video: MockVideo;
@@ -31,6 +32,7 @@ function formatViews(views: number): string {
 }
 
 export default function VideoCard({ video, index, isFocused = false, shouldPreload = true }: VideoCardProps) {
+  const coverUrl = useEncryptedCover(video.thumbnail);
   const navigate = useNavigate();
   const { isFavorited, toggleFavorite } = useVideo();
   const favorited = isFavorited(video.id);
@@ -178,7 +180,7 @@ export default function VideoCard({ video, index, isFocused = false, shouldPrelo
           isPortrait ? 'aspect-[3/4]' : 'aspect-[16/9]'
         }`}
       >
-        <img
+        <EncryptedCover
           src={video.thumbnail}
           alt={video.title}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -189,7 +191,7 @@ export default function VideoCard({ video, index, isFocused = false, shouldPrelo
         {video.playbackUrl && (
           <video
             ref={previewRef}
-            poster={video.thumbnail}
+            poster={coverUrl}
             muted
             playsInline
             preload={isFocused ? 'auto' : shouldPreload ? 'metadata' : 'none'}

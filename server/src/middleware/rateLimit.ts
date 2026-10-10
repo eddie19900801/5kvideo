@@ -5,10 +5,21 @@ type RateLimitOptions = { windowMs: number; max: number; scope: string };
 
 const buckets = new Map<string, RateLimitEntry>();
 
+function clientKey(req: Request) {
+  const forwarded = String(
+    req.get('cf-connecting-ip') ||
+    req.get('x-real-ip') ||
+    req.get('x-forwarded-for') ||
+    req.ip ||
+    'unknown',
+  ).split(',')[0].trim();
+  return forwarded.slice(0, 100);
+}
+
 export function rateLimit(options: RateLimitOptions) {
   return (req: Request, res: Response, next: NextFunction) => {
     const now = Date.now();
-    const key = `${options.scope}:${req.ip}`;
+    const key = `${options.scope}:${clientKey(req)}`;
     const current = buckets.get(key);
     const entry = !current || current.resetAt <= now
       ? { count: 0, resetAt: now + options.windowMs }
@@ -30,9 +41,9 @@ export const guestRateLimit = rateLimit({ windowMs: 60_000, max: 10, scope: 'gue
 export const loginRateLimit = rateLimit({ windowMs: 15 * 60_000, max: 10, scope: 'login' });
 export const viewRateLimit = rateLimit({ windowMs: 60_000, max: 120, scope: 'view' });
 export const analyticsRateLimit = rateLimit({ windowMs: 60_000, max: 60, scope: 'analytics' });
+export const playbackIssueRateLimit = rateLimit({ windowMs: 60_000, max: 60, scope: 'playback-issue' });
 
 setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of buckets) if (entry.resetAt <= now) buckets.delete(key);
 }, 5 * 60_000).unref();
-

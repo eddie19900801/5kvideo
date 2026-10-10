@@ -4,6 +4,7 @@ import { Button, Card, Input, message, Slider, Space, Spin, Tag } from "antd";
 import { ArrowLeftOutlined, CameraOutlined, SaveOutlined } from "@ant-design/icons";
 import Hls from "hls.js";
 import { api, uploadVideoCover } from "./api";
+import { useEncryptedCover } from "./encryptedCover";
 
 type CoverVideo = { id:string; title:string; thumbnail:string; playbackUrl:string; duration:number; aspectRatio:"portrait"|"landscape" };
 type LayoutMode = "split"|"grid"|"diagonal"|"magazine";
@@ -32,6 +33,7 @@ function paintMosaic(canvas:HTMLCanvasElement,base:HTMLCanvasElement,strokes:Mos
 }
 
 export default function CoverEditor({video,onBack,onSaved}:{video:CoverVideo;onBack:()=>void;onSaved:(thumbnail:string)=>void}){
+  const poster=useEncryptedCover(video.thumbnail);
   const playerRef=useRef<HTMLVideoElement>(null),canvasRef=useRef<HTMLCanvasElement>(null),baseCanvasRef=useRef<HTMLCanvasElement>(document.createElement("canvas"));
   const paintingRef=useRef(false),strokesRef=useRef<MosaicStroke[]>([]);
   const [assets,setAssets]=useState<string[]>([]),[selected,setSelected]=useState<string[]>([]);
@@ -67,7 +69,7 @@ export default function CoverEditor({video,onBack,onSaved}:{video:CoverVideo;onB
   const stopMosaic=()=>{paintingRef.current=false};
 
   return <div className="cover-page"><div className="cover-page-head"><Space><Button icon={<ArrowLeftOutlined/>} onClick={onBack}>返回视频列表</Button><div><h2>封面编辑</h2><span>{video.title}</span></div></Space><Button type="primary" size="large" icon={<SaveOutlined/>} loading={saving} disabled={selected.length<1} onClick={save}>保存为视频封面</Button></div>
-    <Card title="1. 从视频截取画面"><video ref={playerRef} className="cover-source-video" controls poster={video.thumbnail} onTimeUpdate={e=>setTime(e.currentTarget.currentTime)}/><div className="cover-capture-row"><Slider min={0} max={video.duration} step={.1} value={time} onChange={value=>{setTime(value);if(playerRef.current)playerRef.current.currentTime=value}}/><Button type="primary" icon={<CameraOutlined/>} loading={capturing} onClick={capture}>截取当前帧</Button><span>{time.toFixed(1)} 秒</span></div></Card>
+    <Card title="1. 从视频截取画面"><video ref={playerRef} className="cover-source-video" controls poster={poster} onTimeUpdate={e=>setTime(e.currentTarget.currentTime)}/><div className="cover-capture-row"><Slider min={0} max={video.duration} step={.1} value={time} onChange={value=>{setTime(value);if(playerRef.current)playerRef.current.currentTime=value}}/><Button type="primary" icon={<CameraOutlined/>} loading={capturing} onClick={capture}>截取当前帧</Button><span>{time.toFixed(1)} 秒</span></div></Card>
     <Card title="2. 图片资源区（随机10张，可选择1至4张）" extra={<Space><Button loading={refreshing} onClick={refreshAssets}>刷新10张</Button><Tag color="orange">已选择 {selected.length}/4</Tag></Space>}><Spin spinning={loading||refreshing}><div className="cover-assets">{assets.map(url=><button key={url} className={selected.includes(url)?"selected":""} onClick={()=>toggle(url)}><img src={url}/><span>{selected.includes(url)?selected.indexOf(url)+1:"选择"}</span></button>)}</div></Spin></Card>
     <Card title="3. 封面排版、艺术字与去字修复"><div className="cover-workbench"><div className="cover-options"><b>自适应同色马赛克</b><Space wrap><Button type={mosaicEnabled?"primary":"default"} onClick={()=>setMosaicEnabled(value=>!value)}>{mosaicEnabled?"同色马赛克已开启":"开启同色马赛克"}</Button><Button disabled={!strokes.length} onClick={()=>setStrokes(value=>value.slice(0,-1))}>撤销上一笔</Button><Button danger disabled={!strokes.length} onClick={()=>setStrokes([])}>清空修复</Button></Space><div className="mosaic-size"><span>涂抹大小</span><Slider min={20} max={100} value={brushSize} onChange={setBrushSize}/></div><p>{mosaicEnabled?"请直接按住并涂过原图文字。色块会自动采用当前位置的背景颜色，并柔化边缘。":"开启后直接涂抹需要遮盖的原图文字，不需要取样。"}</p><b>排版模式</b><div className="cover-preset-list">{layouts.map(item=><Button key={item.key} type={layout===item.key?"primary":"default"} onClick={()=>setLayout(item.key)}>{item.name}</Button>)}<Button onClick={()=>setLayout(layouts[Math.floor(Math.random()*layouts.length)].key)}>随机排版</Button></div><b>封面标题</b><Input.TextArea value={title} maxLength={32} rows={3} onChange={e=>setTitle(e.target.value)}/><b>艺术字模板</b><div className="cover-art-list">{artStyles.map((item,index)=><button key={item.name} className={art===index?"selected":""} style={{color:item.fill,WebkitTextStroke:`1px ${item.stroke}`}} onClick={()=>setArt(index)}>{item.name}</button>)}</div></div><div className={`cover-canvas-wrap ${video.aspectRatio} ${mosaicEnabled?"mosaic-active":""}`}><canvas ref={canvasRef} onPointerDown={startMosaic} onPointerMove={moveMosaic} onPointerUp={stopMosaic} onPointerCancel={stopMosaic}/></div></div></Card>
   </div>;

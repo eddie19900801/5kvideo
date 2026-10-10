@@ -1,0 +1,32 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { randomInt, randomUUID } from 'node:crypto';
+import type { Video } from '../types.js';
+
+type RemoteVod={vod_id:number|string;vod_name?:string;type_name?:string;vod_pic?:string;vod_blurb?:string;vod_content?:string;vod_duration?:string;vod_time?:string;vod_play_url?:string};
+type RemoteResponse={pagecount?:number;list?:RemoteVod[]};
+type SyncStatus={running:boolean;lastStartedAt?:string;lastFinishedAt?:string;nextRunAt:string;checkedPages:number;added:number;updated:number;total:number;error?:string};
+const dataDirectory=path.dirname(path.resolve(process.env.DATA_FILE||'./data/db.json'));
+const catalogFile=path.join(dataDirectory,'collected-catalog.json'),statusFile=path.join(dataDirectory,'collector-sync-status.json'),lockFile=path.join(dataDirectory,'collector-sync.lock');
+const endpoints=['https://hsckzy888.com/api.php/provide/vod/from/hsckm3u8/at/json/','https://hszyckapi.vip/api.php/provide/vod/from/hsckm3u8/at/json/'];
+let running=false,timer:NodeJS.Timeout|undefined;
+
+function nextRun(){const now=new Date(),local=new Date(now.getTime()+7*3600_000);let target=Date.UTC(local.getUTCFullYear(),local.getUTCMonth(),local.getUTCDate(),3)-7*3600_000;if(target<=now.getTime())target+=86400_000;return new Date(target).toISOString()}
+function storedStatus():SyncStatus{try{return JSON.parse(fs.readFileSync(statusFile,'utf8')) as SyncStatus}catch{return{running:false,nextRunAt:nextRun(),checkedPages:0,added:0,updated:0,total:0}}}
+function writeStatus(value:SyncStatus){fs.mkdirSync(dataDirectory,{recursive:true});fs.writeFileSync(statusFile,JSON.stringify(value,null,2))}
+export function collectorSyncStatus(){return{...storedStatus(),running}}
+
+const clean=(value:unknown,max=5000)=>String(value||'').replace(/<[^>]*>/g,' ').replace(/&nbsp;/gi,' ').replace(/\s+/g,' ').trim().slice(0,max);
+function duration(value:unknown){const text=String(value||'').trim();if(/^\d+(?::\d+){1,2}$/.test(text))return Math.max(1,text.split(':').reduce((sum,part)=>sum*60+Number(part),0));return Math.max(1,Number(text.match(/(\d+)\s*分/)?.[1]||0)*60+Number(text.match(/(\d+)\s*秒/)?.[1]||0))}
+function stream(value:unknown){for(const entry of String(value||'').split('#')){const at=entry.indexOf('$'),url=(at>=0?entry.slice(at+1):entry).trim();if(/^https:\/\/\S+\.m3u8(?:\?\S*)?$/i.test(url))return url}return null}
+function convert(item:RemoteVod,old?:Video):Video|null{const remoteId=String(item.vod_id||''),playbackUrl=stream(item.vod_play_url),thumbnail=String(item.vod_pic||'');if(!remoteId||!playbackUrl||!/^https:\/\//i.test(thumbnail))return null;const now=new Date().toISOString(),category=clean(item.type_name,100);return{id:old?.id||randomUUID(),title:clean(item.vod_name,200)||`采集视频 ${remoteId}`,description:clean(item.vod_content||item.vod_blurb),thumbnail,playbackUrl,duration:duration(item.vod_duration),tags:category?[category,'采集视频']:['采集视频'],categoryIds:old?.categoryIds||[],views:old?.views??randomInt(10_000,100_000),aspectRatio:'landscape',isAdult:true,status:'draft',createdAt:old?.createdAt||now,sourceType:'external',externalSource:{sourceKey:'hsckm3u8',remoteId,remoteUpdatedAt:String(item.vod_time||''),importedAt:old?.externalSource?.importedAt||now}}}
+async function fetchPage(page:number){let last:unknown;for(let attempt=0;attempt<3;attempt++){for(const base of endpoints){try{const url=new URL(base);url.search=new URLSearchParams({ac:'detail',pg:String(page)}).toString();const response=await fetch(url,{headers:{'User-Agent':'5KVIDEO-Collector/2.0'},signal:AbortSignal.timeout(30_000)});if(!response.ok)throw new Error(`HTTP ${response.status}`);const payload=await response.json() as RemoteResponse;if(!Array.isArray(payload.list))throw new Error('采集响应格式错误');return payload}catch(error){last=error}}await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)))}throw last instanceof Error?last:new Error('采集源不可用')}
+
+export async function runCollectorCatalogSync(){if(running)return collectorSyncStatus();let lock:number|undefined;try{if(fs.existsSync(lockFile)&&Date.now()-fs.statSync(lockFile).mtimeMs>6*3600_000)fs.rmSync(lockFile,{force:true});lock=fs.openSync(lockFile,'wx')}catch{return collectorSyncStatus()}
+  running=true;const started=new Date().toISOString();let status:SyncStatus={...storedStatus(),running:true,lastStartedAt:started,nextRunAt:nextRun(),checkedPages:0,added:0,updated:0,error:undefined};writeStatus(status);
+  try{const payload=fs.existsSync(catalogFile)?JSON.parse(fs.readFileSync(catalogFile,'utf8')) as {pageCount?:number;videos?:Video[]}:{videos:[]};const videos=Array.isArray(payload.videos)?payload.videos:[],byId=new Map(videos.map(video=>[video.externalSource?.remoteId||'',video]));let unchangedPages=0,pageCount=payload.pageCount||1;
+    for(let page=1;page<=Math.min(pageCount||100,100)&&unchangedPages<3;page++){const remote=await fetchPage(page);if(page===1)pageCount=Math.max(1,Number(remote.pagecount||1));let changed=0;for(const item of remote.list||[]){const id=String(item.vod_id),old=byId.get(id),converted=convert(item,old);if(!converted)continue;if(!old){videos.unshift(converted);byId.set(id,converted);status.added++;changed++}else if(old.externalSource?.remoteUpdatedAt!==converted.externalSource?.remoteUpdatedAt||old.playbackUrl!==converted.playbackUrl||old.title!==converted.title){Object.assign(old,converted,{id:old.id,createdAt:old.createdAt,views:old.views});status.updated++;changed++}}status.checkedPages=page;unchangedPages=changed?0:unchangedPages+1;writeStatus(status)}
+    const temporary=`${catalogFile}.sync-${process.pid}.tmp`;fs.writeFileSync(temporary,JSON.stringify({pageCount,videos},null,2));fs.renameSync(temporary,catalogFile);status={...status,running:false,lastFinishedAt:new Date().toISOString(),nextRunAt:nextRun(),total:videos.length};writeStatus(status);return status
+  }catch(error){status={...status,running:false,lastFinishedAt:new Date().toISOString(),nextRunAt:nextRun(),error:error instanceof Error?error.message:'每日采集失败'};writeStatus(status);return status}finally{running=false;if(lock!==undefined)fs.closeSync(lock);fs.rmSync(lockFile,{force:true})}}
+
+export function startCollectorCatalogScheduler(){if(timer)return;const tick=()=>{const status=storedStatus();if(Date.now()>=new Date(status.nextRunAt||0).getTime())void runCollectorCatalogSync()};timer=setInterval(tick,60_000);timer.unref();setTimeout(tick,5000).unref()}

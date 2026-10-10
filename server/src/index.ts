@@ -19,6 +19,11 @@ import { analyticsRouter } from "./routes/analytics.js";
 import { publicMetadataRouter } from "./routes/publicMetadata.js";
 import { cleanupStaleUploadTasks } from "./services/mediaLifecycle.js";
 import { adminMediaJobsRouter } from "./routes/adminMediaJobs.js";
+import { adminCollectorsRouter } from "./routes/adminCollectors.js";
+import { optionalAuthenticate } from "./auth.js";
+import { playbackAccess } from "./middleware/playbackAccess.js";
+import { startCollectorCatalogScheduler } from "./services/collectorCatalogSync.js";
+import { collectedVideosRouter } from "./routes/collectedVideos.js";
 
 export const app = express();
 const { port, mediaDir, chunkDir } = config;
@@ -31,6 +36,7 @@ app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(
   cors({
     origin: config.webOrigins,
+    credentials: true,
   }),
 );
 app.use(express.json({ limit: "2mb" }));
@@ -48,21 +54,25 @@ app.use(
 app.get("/health", (_, res) =>
   ok(res, { status: "ok", time: new Date().toISOString() }),
 );
+app.use("/api/v1", optionalAuthenticate, playbackAccess);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/me", meRouter);
 app.use("/api/v1/videos", userVideosRouter);
 app.use("/api/v1/videos", videosRouter);
+app.use("/api/v1/collected-videos", collectedVideosRouter);
 app.use("/api/v1/admin", adminCatalogRouter);
 app.use("/api/v1/admin", adminVideosRouter);
 app.use("/api/v1/admin", adminMediaRouter);
 app.use("/api/v1/admin", adminUploadsRouter);
 app.use("/api/v1/admin", adminMediaJobsRouter);
+app.use("/api/v1/admin", adminCollectorsRouter);
 app.use("/api/v1", analyticsRouter);
 app.use("/api/v1", publicMetadataRouter);
 app.use((_, res) =>
   res.status(404).json({ error: { code: "NOT_FOUND", message: "接口不存在" } }),
 );
 export function startServer(listenPort = port) {
+  startCollectorCatalogScheduler();
   return app.listen(listenPort, () =>
     console.log(`5K Video API listening on http://localhost:${listenPort}`),
   );
@@ -70,6 +80,3 @@ export function startServer(listenPort = port) {
 
 const entryFile = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : "";
 if (entryFile === import.meta.url) startServer();
-
-
-

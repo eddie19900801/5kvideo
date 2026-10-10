@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-export interface AuthRequest extends Request { auth?: {id:string;role:'user'|'admin'} }
+export interface AuthRequest extends Request { auth?: {id:string;role:'user'|'admin'}; playbackViewer?: string }
 const secret=()=>{
   const configured=process.env.JWT_SECRET?.trim();
   if(configured)return configured;

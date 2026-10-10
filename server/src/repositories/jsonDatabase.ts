@@ -5,6 +5,7 @@ import type { Database } from "../types.js";
 import type { DatabaseRepository } from "./database.js";
 
 export class JsonDatabaseRepository implements DatabaseRepository {
+  private cached?:{mtime:number;value:Database};
   constructor(private readonly file: string) {}
 
   private createSeed(): Database {
@@ -34,6 +35,7 @@ export class JsonDatabaseRepository implements DatabaseRepository {
         createdAt,
       }],
       tags: [{ id: "tag-recommend", name: "推荐", createdAt }],
+      categories: [],
       favorites: [],
       progress: [],
       analyticsEvents: [],
@@ -52,18 +54,21 @@ export class JsonDatabaseRepository implements DatabaseRepository {
 
   read(): Database {
     this.ensureFile();
+    const mtime=fs.statSync(this.file).mtimeMs;if(this.cached?.mtime===mtime)return this.cached.value;
     const database = JSON.parse(fs.readFileSync(this.file, "utf8")) as Database;
     database.tags ||= [];
+    database.categories ||= [];
     database.analyticsEvents ||= [];
     database.auditLogs ||= [];
     database.mediaJobs ||= [];
-    return database;
+    this.cached={mtime,value:database};return database;
   }
 
   transaction<T>(operation: (database: Database) => T): T {
     const database = this.read();
     const result = operation(database);
-    fs.writeFileSync(this.file, JSON.stringify(database, null, 2));
+    fs.writeFileSync(this.file, JSON.stringify(database));
+    this.cached={mtime:fs.statSync(this.file).mtimeMs,value:database};
     return result;
   }
 }

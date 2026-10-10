@@ -5,6 +5,7 @@ import { attachVideo } from '@/services/player';
 import { request } from '@/services/api';
 import QRCode from 'qrcode';
 import { track } from '@/services/analytics';
+import { EncryptedCover, useEncryptedCover } from '@/components/base/EncryptedCover';
 
 function formatTime(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -23,7 +24,9 @@ export default function VideoPlayer() {
   const currentIndex = allVideos.findIndex((v) => v.id === id);
   const [videoIndex, setVideoIndex] = useState(currentIndex >= 0 ? currentIndex : 0);
 
-  const video = allVideos[videoIndex] || allVideos[0];
+  const sourceVideo = allVideos[videoIndex] || allVideos[0];
+  const decryptedCover = useEncryptedCover(sourceVideo?.thumbnail);
+  const video = sourceVideo ? { ...sourceVideo, thumbnail: decryptedCover || (sourceVideo.thumbnail.includes('/cover.enc') ? '' : sourceVideo.thumbnail) } : sourceVideo;
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [isBuffering, setIsBuffering] = useState(true);
@@ -83,6 +86,9 @@ export default function VideoPlayer() {
   });
 
   const chapters = video.chapters || [];
+  const trimStart = video.trimStart || 0;
+  const logicalToMediaTime = useCallback((time: number) => Math.max(0, Math.min(video.duration, time)) + trimStart, [video.duration, trimStart]);
+  const mediaToLogicalTime = useCallback((time: number) => Math.max(0, Math.min(video.duration, time - trimStart)), [video.duration, trimStart]);
   const favorited = isFavorited(video.id);
   const shareUrl = `${window.location.origin}/video/${encodeURIComponent(video.id)}`;
 
@@ -144,7 +150,9 @@ export default function VideoPlayer() {
         ? handoffTime
         : getWatchProgress(video.id);
       if (savedTime > 0 && Number.isFinite(el.duration)) {
-        el.currentTime = Math.min(savedTime, Math.max(0, el.duration - 0.1));
+        el.currentTime = logicalToMediaTime(Math.min(savedTime, Math.max(0, video.duration - 0.1)));
+      } else if (trimStart > 0) {
+        el.currentTime = trimStart;
       }
       sessionStorage.removeItem(handoffKey);
       void el.play().catch(() => setIsPlaying(false));
@@ -155,7 +163,7 @@ export default function VideoPlayer() {
       el.removeEventListener('loadedmetadata', restorePlayback);
       detach();
     };
-  }, [video.id, video.playbackUrl, getWatchProgress]);
+  }, [video.id, video.playbackUrl, video.duration, trimStart, logicalToMediaTime, getWatchProgress]);
 
   // 当前视频稳定后，按短视频信息流方式预热相邻内容：下一条约 6 秒，
   // 下下条和上一条只读取 metadata；省流量/弱网时全部降级为 metadata。
@@ -329,12 +337,12 @@ export default function VideoPlayer() {
 
   const handleChapterClick = useCallback(
     (time: number) => {
-      if (videoElementRef.current) videoElementRef.current.currentTime = time;
+      if (videoElementRef.current) videoElementRef.current.currentTime = logicalToMediaTime(time);
       setProgress(time);
       setShowControls(true);
       if (!isPlaying) setIsPlaying(true);
     },
-    [isPlaying]
+    [isPlaying, logicalToMediaTime]
   );
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -348,12 +356,12 @@ export default function VideoPlayer() {
     setShowControls(true);
     touchStartY.current = e.touches[0].clientY;
     touchStartX.current = e.touches[0].clientX;
-    touchStartProgress.current = videoElementRef.current?.currentTime ?? progress;
+    touchStartProgress.current = videoElementRef.current ? mediaToLogicalTime(videoElementRef.current.currentTime) : progress;
 
     longPressTimer.current = setTimeout(() => {
       setIsLongPressing(true);
     }, 500);
-  }, [progress, showControls]);
+  }, [progress, showControls, mediaToLogicalTime]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (longPressTimer.current) {
@@ -368,12 +376,12 @@ export default function VideoPlayer() {
       isDragging.current = true;
       const secondsPerPixel=Math.max(0.1,Math.min(2,video.duration/600));
       const next=Math.max(0,Math.min(video.duration,touchStartProgress.current+deltaX*secondsPerPixel));
-      if(videoElementRef.current)videoElementRef.current.currentTime=next;
+      if(videoElementRef.current)videoElementRef.current.currentTime=logicalToMediaTime(next);
       setProgress(next);
       setShowControls(true);
       setThumbnailPreview({visible:true,percent:(next/video.duration)*100,time:next});
     }
-  }, [video.duration]);
+  }, [video.duration, logicalToMediaTime]);
 
   const handleTouchEnd = useCallback(
     (e: React.TouchEvent) => {
@@ -408,7 +416,7 @@ export default function VideoPlayer() {
 
       if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
         const newProgress = progress + (deltaX > 0 ? -10 : 10);
-        if (videoElementRef.current) videoElementRef.current.currentTime = Math.max(0, Math.min(video.duration, newProgress));
+        if (videoElementRef.current) videoElementRef.current.currentTime = logicalToMediaTime(newProgress);
         setProgress(Math.max(0, Math.min(video.duration, newProgress)));
         return;
       }
@@ -434,16 +442,16 @@ export default function VideoPlayer() {
         setIsPlaying((prev) => !prev);
       }
     },
-    [isLongPressing, allVideos.length, progress, video.duration]
+    [isLongPressing, allVideos.length, progress, video.duration, logicalToMediaTime]
   );
 
   const handleProgressBarClick = useCallback(
     (clientX: number, rect: DOMRect) => {
       const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      if (videoElementRef.current) videoElementRef.current.currentTime = ratio * video.duration;
+      if (videoElementRef.current) videoElementRef.current.currentTime = logicalToMediaTime(ratio * video.duration);
       setProgress(ratio * video.duration);
     },
-    [video.duration]
+    [video.duration, logicalToMediaTime]
   );
 
   const scrubTo = useCallback((clientX:number, element:HTMLElement) => {
@@ -451,11 +459,11 @@ export default function VideoPlayer() {
     const ratio=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width));
     const time=ratio*video.duration;
     previewTimeRef.current=time;
-    if(previewVideoRef.current&&previewVideoRef.current.readyState>=1)previewVideoRef.current.currentTime=time;
-    if(videoElementRef.current)videoElementRef.current.currentTime=time;
+    if(previewVideoRef.current&&previewVideoRef.current.readyState>=1)previewVideoRef.current.currentTime=logicalToMediaTime(time);
+    if(videoElementRef.current)videoElementRef.current.currentTime=logicalToMediaTime(time);
     setProgress(time);
     setThumbnailPreview({visible:true,percent:ratio*100,time});
-  },[video.duration]);
+  },[video.duration, logicalToMediaTime]);
 
   const handleProgressPressStart = useCallback(
     (clientX: number, rect: DOMRect) => {
@@ -487,16 +495,16 @@ export default function VideoPlayer() {
       }
       const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
       if (progressPressRef.current.active) {
-        if (videoElementRef.current) videoElementRef.current.currentTime = ratio * video.duration;
+        if (videoElementRef.current) videoElementRef.current.currentTime = logicalToMediaTime(ratio * video.duration);
         setProgress(ratio * video.duration);
         setThumbnailPreview({ visible: false, percent: 0, time: 0 });
         progressPressRef.current.active = false;
       } else {
-        if (videoElementRef.current) videoElementRef.current.currentTime = ratio * video.duration;
+        if (videoElementRef.current) videoElementRef.current.currentTime = logicalToMediaTime(ratio * video.duration);
         setProgress(ratio * video.duration);
       }
     },
-    [video.duration]
+    [video.duration, logicalToMediaTime]
   );
 
   const handleProgressPressCancel = useCallback(() => {
@@ -605,23 +613,30 @@ export default function VideoPlayer() {
   }, []);
 
   const handleVideoTimeUpdate = useCallback((element: HTMLVideoElement) => {
-    if (loopMode === 'active' && loopA !== null && loopB !== null && element.currentTime >= loopB - 0.18) {
+    const logicalTime = mediaToLogicalTime(element.currentTime);
+    if (element.currentTime < trimStart - 0.1) { element.currentTime = trimStart; return; }
+    if (loopMode === 'active' && loopA !== null && loopB !== null && logicalTime >= loopB - 0.18) {
       loopSeekRef.current = true;
       if (loopSeekTimer.current) clearTimeout(loopSeekTimer.current);
-      element.currentTime = loopA;
+      element.currentTime = logicalToMediaTime(loopA);
       setProgress(loopA);
       loopSeekTimer.current = setTimeout(() => { loopSeekRef.current = false; }, 1000);
       if (element.paused && isPlaying) void element.play().catch(() => setIsPlaying(false));
       return;
     }
-    setProgress(element.currentTime);
-    if (element.currentTime >= 10 && !effectiveTrackedRef.current) { effectiveTrackedRef.current = true; void track('video_effective', { videoId: video.id }); }
-  }, [loopMode, loopA, loopB, isPlaying, video.id]);
+    setProgress(logicalTime);
+    if (logicalTime >= video.duration - 0.18) {
+      element.pause(); setProgress(video.duration); setIsPlaying(false);
+      if (!completedTrackedRef.current) { completedTrackedRef.current = true; void track('video_complete', { videoId: video.id }); }
+      return;
+    }
+    if (logicalTime >= 10 && !effectiveTrackedRef.current) { effectiveTrackedRef.current = true; void track('video_effective', { videoId: video.id }); }
+  }, [loopMode, loopA, loopB, isPlaying, video.id, video.duration, trimStart, mediaToLogicalTime, logicalToMediaTime]);
 
   const handleVideoEnded = useCallback((element: HTMLVideoElement) => {
     if (loopMode === 'active' && loopA !== null && loopB !== null) {
       loopSeekRef.current = true;
-      element.currentTime = loopA;
+      element.currentTime = logicalToMediaTime(loopA);
       setProgress(loopA);
       if (loopSeekTimer.current) clearTimeout(loopSeekTimer.current);
       loopSeekTimer.current = setTimeout(() => { loopSeekRef.current = false; }, 1000);
@@ -630,7 +645,7 @@ export default function VideoPlayer() {
     }
     setIsPlaying(false);
     if (!completedTrackedRef.current) { completedTrackedRef.current = true; void track('video_complete', { videoId: video.id }); }
-  }, [loopMode, loopA, loopB, video.id]);
+  }, [loopMode, loopA, loopB, video.id, logicalToMediaTime]);
 
   useEffect(() => () => {
     if (loopSeekTimer.current) clearTimeout(loopSeekTimer.current);
@@ -877,6 +892,16 @@ export default function VideoPlayer() {
             showControls ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
           }`}
         >
+          {!!video.highlights?.length && (
+            <div className="mb-2 flex gap-2 overflow-x-auto pb-1" data-player-control>
+              {video.highlights.map(item => (
+                <button key={item.id} onClick={event=>{event.stopPropagation();if(videoElementRef.current)videoElementRef.current.currentTime=logicalToMediaTime(item.time);setProgress(item.time);setIsPlaying(true)}} className="relative h-14 w-24 flex-none overflow-hidden rounded-md border border-white/15 bg-black/40 active:scale-95">
+                  <EncryptedCover src={item.image} alt={formatTime(item.time)} className="h-full w-full object-cover" />
+                  <span className="absolute bottom-0 right-0 rounded-tl bg-black/70 px-1 py-0.5 text-[9px] text-white">{formatTime(item.time)}</span>
+                </button>
+              ))}
+            </div>
+          )}
           {/* Progress bar with chapters */}
           <div className="mb-3">
             {/* Chapter labels directly on progress bar */}
@@ -924,7 +949,7 @@ export default function VideoPlayer() {
                 >
                   <div className="flex flex-col items-center">
                     <div className="w-32 h-[72px] rounded-lg overflow-hidden shadow-lg ring-1 ring-foreground-50/20">
-                      {video.playbackUrl ? <video ref={previewVideoRef} src={video.playbackUrl} muted playsInline preload="metadata" poster={video.thumbnail} onLoadedMetadata={e=>{e.currentTarget.currentTime=previewTimeRef.current}} className="w-full h-full object-cover"/> : <img src={video.thumbnail} alt="" className="w-full h-full object-cover"/>}
+                      {video.playbackUrl ? <video ref={previewVideoRef} src={video.playbackUrl} muted playsInline preload="metadata" poster={video.thumbnail} onLoadedMetadata={e=>{e.currentTarget.currentTime=logicalToMediaTime(previewTimeRef.current)}} className="w-full h-full object-cover"/> : <img src={video.thumbnail} alt="" className="w-full h-full object-cover"/>}
                     </div>
                     <span className="text-[10px] font-semibold text-foreground-50 mt-1 bg-black/60 px-1.5 py-0.5 rounded">
                       {formatTime(thumbnailPreview.time)}

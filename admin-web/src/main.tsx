@@ -5,7 +5,6 @@ import {
   Card,
   ConfigProvider,
   Form,
-  Image,
   Input,
   Layout,
   Menu,
@@ -21,8 +20,10 @@ import {
   Upload,
   message,
 } from "antd";
+import { EncryptedCoverImage } from "./EncryptedCoverImage";
 import {
   DashboardOutlined,
+  CloudDownloadOutlined,
   EditOutlined,
   LogoutOutlined,
   PlusOutlined,
@@ -33,8 +34,12 @@ import {
 import { api, uploadMedia } from "./api";
 import "antd/dist/reset.css";
 import "./style.css";
+import "./highlights.css";
+const highlightCount = (duration: number) =>
+  duration <= 300 ? 5 : duration <= 900 ? 8 : duration <= 1800 ? 12 : 20;
 const CoverEditor = React.lazy(() => import("./CoverEditor"));
 const Analytics = React.lazy(() => import("./Analytics"));
+const CollectorManager = React.lazy(() => import("./CollectorManager"));
 type Video = {
   id: string;
   title: string;
@@ -44,10 +49,27 @@ type Video = {
   duration: number;
   tags: string[];
   chapters?: { id: string; label: string; time: number }[];
+  categoryIds?: string[];
   views: number;
   aspectRatio: "portrait" | "landscape";
   isAdult: boolean;
   status: "draft" | "processing" | "published" | "offline";
+  sourceType?: "local" | "external";
+  trimStart?: number;
+  trimEnd?: number;
+};
+type Highlight = {
+  id: string;
+  time: number;
+  slot: number;
+  image: string;
+  source: "auto" | "manual";
+  createdAt: string;
+};
+type HighlightResult = {
+  status: "idle" | "processing" | "ready" | "failed";
+  error?: string;
+  items: Highlight[];
 };
 const formatDuration = (value: number) => {
   const total = Math.max(0, Math.round(Number(value) || 0)),
@@ -64,6 +86,13 @@ type Values = {
   tags?: string;
   isAdult: boolean;
   status: Video["status"];
+  categoryIds?: string[];
+};
+type VideoCategory = {
+  id: string;
+  name: string;
+  videoCount: number;
+  createdAt: string;
 };
 type AdminUser = {
   id: string;
@@ -140,13 +169,16 @@ function App() {
   const [form] = Form.useForm<Values>();
   const currentTags = Form.useWatch("tags", form) || "";
   const [logged, setLogged] = useState(!!localStorage.getItem("admin_token"));
-  const [active, setActive] = useState("videos");
+  const [active, setActive] = useState("dashboard");
   const [videos, setVideos] = useState<Video[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [tags, setTags] = useState<ManagedTag[]>([]);
   const [newTag, setNewTag] = useState("");
   const [tagSearch, setTagSearch] = useState("");
   const [tagAdding, setTagAdding] = useState(false);
+  const [categories, setCategories] = useState<VideoCategory[]>([]),
+    [newCategory, setNewCategory] = useState(""),
+    [categoryDrafts, setCategoryDrafts] = useState<Record<string, string>>({});
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Video>();
   const [videoFile, setVideoFile] = useState<File>();
@@ -158,6 +190,10 @@ function App() {
     { id: string; label: string; time: number }[]
   >([]);
   const [nodeSaving, setNodeSaving] = useState(false);
+  const [highlights, setHighlights] = useState<HighlightResult>({
+    status: "idle",
+    items: [],
+  });
   const [uploadTasks, setUploadTasks] = useState<UploadTask[]>([]);
   const [refreshingVideoId, setRefreshingVideoId] = useState<string>();
   const [commonTagsExpanded, setCommonTagsExpanded] = useState(false);
@@ -179,6 +215,13 @@ function App() {
   const loadTags = () =>
     api<ManagedTag[]>("/admin/tags")
       .then(setTags)
+      .catch((e) => message.error(e.message));
+  const loadCategories = () =>
+    api<VideoCategory[]>("/admin/categories")
+      .then((rows) => {
+        setCategories(rows);
+        setCategoryDrafts(Object.fromEntries(rows.map((x) => [x.id, x.name])));
+      })
       .catch((e) => message.error(e.message));
   const addTag = async () => {
     const name = newTag.trim();
@@ -212,7 +255,9 @@ function App() {
     setRefreshingVideoId(id);
     try {
       const refreshed = await api<Video>(`/admin/videos/${id}`);
-      setVideos((list) => list.map((video) => video.id === id ? refreshed : video));
+      setVideos((list) =>
+        list.map((video) => (video.id === id ? refreshed : video)),
+      );
       message.success("该视频已刷新");
     } catch (e) {
       message.error((e as Error).message);
@@ -221,15 +266,61 @@ function App() {
     }
   };
   useEffect(() => {
-    if (logged) {
-      load();
-      loadUsers();
-      loadTags();
-    }
-  }, [logged]);
-  useEffect(()=>{const sync=()=>{const match=location.hash.match(/^#cover\/(.+)$/);if(!match){setCoverEditing(undefined);return}const found=videos.find(v=>v.id===decodeURIComponent(match[1]));if(found)setCoverEditing(found)};sync();window.addEventListener("hashchange",sync);return()=>window.removeEventListener("hashchange",sync)},[videos]);
+    if (!logged) return;
+    if(active==="videos"){void load();void loadTags();void loadCategories()}
+    else if(active==="users")void loadUsers();
+    else if(active==="tags")void loadTags();
+    else if(active==="categories")void loadCategories();
+  }, [logged,active]);
+  useEffect(() => {
+    const sync = () => {
+      const match = location.hash.match(/^#cover\/(.+)$/);
+      if (!match) {
+        setCoverEditing(undefined);
+        return;
+      }
+      const found = videos.find((v) => v.id === decodeURIComponent(match[1]));
+      if (found) setCoverEditing(found);
+    };
+    sync();
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, [videos]);
+  useEffect(() => {
+    if (!nodeVideo || highlights.status !== "processing") return;
+    const timer = window.setInterval(
+      () =>
+        void api<HighlightResult>(`/admin/videos/${nodeVideo.id}/highlights`)
+          .then(setHighlights)
+          .catch(() => {}),
+      3000,
+    );
+    return () => window.clearInterval(timer);
+  }, [nodeVideo, highlights.status]);
   if (!logged) return <Login done={() => setLogged(true)} />;
-  if (coverEditing) return <React.Suspense fallback={<div className="page-loading">正在加载封面编辑器…</div>}><CoverEditor video={coverEditing} onBack={()=>{location.hash="";setCoverEditing(undefined)}} onSaved={(thumbnail)=>{setVideos(list=>list.map(v=>v.id===coverEditing.id?{...v,thumbnail}:v));location.hash="";setCoverEditing(undefined)}}/></React.Suspense>;
+  if (coverEditing)
+    return (
+      <React.Suspense
+        fallback={<div className="page-loading">正在加载封面编辑器…</div>}
+      >
+        <CoverEditor
+          video={coverEditing}
+          onBack={() => {
+            location.hash = "";
+            setCoverEditing(undefined);
+          }}
+          onSaved={(thumbnail) => {
+            setVideos((list) =>
+              list.map((v) =>
+                v.id === coverEditing.id ? { ...v, thumbnail } : v,
+              ),
+            );
+            location.hash = "";
+            setCoverEditing(undefined);
+          }}
+        />
+      </React.Suspense>
+    );
   const close = () => {
     setOpen(false);
     setEditing(undefined);
@@ -246,6 +337,7 @@ function App() {
       tags: "",
       isAdult: true,
       status: "draft",
+      categoryIds: [],
     });
     setOpen(true);
   };
@@ -258,6 +350,7 @@ function App() {
       tags: v.tags.join(","),
       isAdult: v.isAdult,
       status: v.status,
+      categoryIds: v.categoryIds || [],
     });
     setOpen(true);
   };
@@ -265,12 +358,18 @@ function App() {
     setNodeVideo(v);
     setNodes([...(v.chapters || [])].sort((a, b) => a.time - b.time));
     setNodeLabel("");
+    setHighlights({ status: "processing", items: [] });
+    void api<HighlightResult>(`/admin/videos/${v.id}/highlights`)
+      .then(setHighlights)
+      .catch((e) => message.error(e.message));
   };
   const addNodeAtCurrentTime = (label: string) => {
     const player = nodePlayer.current;
     const text = label.trim();
     if (!player || !text) return;
-    const time = Number(player.currentTime.toFixed(2));
+    const time = Number(
+      Math.max(0, player.currentTime - (nodeVideo?.trimStart || 0)).toFixed(2),
+    );
     setNodes((prev) =>
       [...prev, { id: crypto.randomUUID(), label: text, time }].sort(
         (a, b) => a.time - b.time,
@@ -393,8 +492,6 @@ function App() {
           selectedKeys={[active]}
           onClick={({ key }) => {
             setActive(key);
-            if (key === "users") loadUsers();
-            if (key === "tags") loadTags();
           }}
           items={[
             {
@@ -403,7 +500,13 @@ function App() {
               label: "数据概览",
             },
             { key: "videos", icon: <VideoCameraOutlined />, label: "视频管理" },
+            {
+              key: "collectors",
+              icon: <CloudDownloadOutlined />,
+              label: "采集视频管理",
+            },
             { key: "tags", label: "标签管理" },
+            { key: "categories", label: "视频分类" },
             { key: "users", label: "用户管理" },
             {
               key: "analytics",
@@ -427,7 +530,7 @@ function App() {
           </Button>
         </Layout.Header>
         <Layout.Content className="content">
-          <Space size={16} className="stats">
+          {active === "videos" && <Space size={16} className="stats">
             <Card>
               <Statistic title="视频总数" value={videos.length} />
             </Card>
@@ -440,10 +543,18 @@ function App() {
                 value={videos.reduce((a, v) => a + v.views, 0)}
               />
             </Card>
-          </Space>
-          {active === "analytics" ? (
+          </Space>}
+          {active === "dashboard" ? (
+            <React.Suspense fallback={<Card loading />}>
+              <Analytics compact />
+            </React.Suspense>
+          ) : active === "analytics" ? (
             <React.Suspense fallback={<Card loading />}>
               <Analytics />
+            </React.Suspense>
+          ) : active === "collectors" ? (
+            <React.Suspense fallback={<Card loading />}>
+              <CollectorManager onImported={() => void load()} />
             </React.Suspense>
           ) : active === "users" ? (
             <Card title="用户管理">
@@ -490,6 +601,127 @@ function App() {
                 ]}
               />
             </Card>
+          ) : active === "categories" ? (
+            <Card
+              title="视频分类"
+              extra={
+                <Space.Compact>
+                  <Input
+                    value={newCategory}
+                    maxLength={30}
+                    placeholder="输入分类名称"
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    onPressEnter={async () => {
+                      if (!newCategory.trim()) return;
+                      try {
+                        await api("/admin/categories", {
+                          method: "POST",
+                          body: JSON.stringify({ name: newCategory.trim() }),
+                        });
+                        setNewCategory("");
+                        await loadCategories();
+                        message.success("分类已添加");
+                      } catch (e) {
+                        message.error((e as Error).message);
+                      }
+                    }}
+                  />
+                  <Button
+                    type="primary"
+                    disabled={!newCategory.trim()}
+                    onClick={async () => {
+                      try {
+                        await api("/admin/categories", {
+                          method: "POST",
+                          body: JSON.stringify({ name: newCategory.trim() }),
+                        });
+                        setNewCategory("");
+                        await loadCategories();
+                        message.success("分类已添加");
+                      } catch (e) {
+                        message.error((e as Error).message);
+                      }
+                    }}
+                  >
+                    添加分类
+                  </Button>
+                </Space.Compact>
+              }
+            >
+              <Table
+                rowKey="id"
+                dataSource={categories}
+                columns={[
+                  {
+                    title: "分类名称",
+                    render: (_, item) => (
+                      <Input
+                        value={categoryDrafts[item.id] ?? item.name}
+                        onChange={(e) =>
+                          setCategoryDrafts((value) => ({
+                            ...value,
+                            [item.id]: e.target.value,
+                          }))
+                        }
+                      />
+                    ),
+                  },
+                  { title: "视频数量", dataIndex: "videoCount" },
+                  {
+                    title: "创建时间",
+                    dataIndex: "createdAt",
+                    render: (x) => new Date(x).toLocaleString(),
+                  },
+                  {
+                    title: "操作",
+                    render: (_, item) => (
+                      <Space>
+                        <Button
+                          type="primary"
+                          disabled={
+                            !(categoryDrafts[item.id] || "").trim() ||
+                            categoryDrafts[item.id] === item.name
+                          }
+                          onClick={async () => {
+                            try {
+                              await api(`/admin/categories/${item.id}`, {
+                                method: "PATCH",
+                                body: JSON.stringify({
+                                  name: categoryDrafts[item.id].trim(),
+                                }),
+                              });
+                              await loadCategories();
+                              message.success("分类已保存");
+                            } catch (e) {
+                              message.error((e as Error).message);
+                            }
+                          }}
+                        >
+                          保存
+                        </Button>
+                        <Popconfirm
+                          title="删除分类？"
+                          description="只解除视频关联，不会删除视频。"
+                          onConfirm={async () => {
+                            try {
+                              await api(`/admin/categories/${item.id}`, {
+                                method: "DELETE",
+                              });
+                              await Promise.all([loadCategories(), load()]);
+                              message.success("分类已删除");
+                            } catch (e) {
+                              message.error((e as Error).message);
+                            }
+                          }}
+                        >
+                          <Button danger>删除</Button>
+                        </Popconfirm>
+                      </Space>
+                    ),
+                  },
+                ]}
+              />
+            </Card>
           ) : active === "tags" ? (
             <Card
               title="标签管理"
@@ -523,7 +755,9 @@ function App() {
               <Table
                 rowKey="id"
                 dataSource={tags.filter((tag) =>
-                  tag.name.toLocaleLowerCase().includes(tagSearch.trim().toLocaleLowerCase()),
+                  tag.name
+                    .toLocaleLowerCase()
+                    .includes(tagSearch.trim().toLocaleLowerCase()),
                 )}
                 columns={[
                   {
@@ -574,9 +808,49 @@ function App() {
                 <div className="upload-task-list">
                   {uploadTasks.map((task) => (
                     <div className="upload-task" key={task.id}>
-                      <div className="upload-task-head"><div><b>{task.title}</b><span>{task.fileName}</span></div><Tag color={task.status === "error" ? "red" : task.status === "success" ? "green" : task.status === "processing" ? "blue" : "orange"}>{task.status === "uploading" ? "上传中" : task.status === "processing" ? "处理中" : task.status === "success" ? "待发布" : "失败"}</Tag></div>
-                      <Progress percent={task.percent} status={task.status === "error" ? "exception" : task.status === "success" ? "success" : "active"}/>
-                      <div className="upload-size">{(task.loaded / 1024 / 1024).toFixed(2)} MB / {(task.total / 1024 / 1024).toFixed(2)} MB · {task.percent}%{task.error && <span className="upload-error"> · {task.error}</span>}</div>
+                      <div className="upload-task-head">
+                        <div>
+                          <b>{task.title}</b>
+                          <span>{task.fileName}</span>
+                        </div>
+                        <Tag
+                          color={
+                            task.status === "error"
+                              ? "red"
+                              : task.status === "success"
+                                ? "green"
+                                : task.status === "processing"
+                                  ? "blue"
+                                  : "orange"
+                          }
+                        >
+                          {task.status === "uploading"
+                            ? "上传中"
+                            : task.status === "processing"
+                              ? "处理中"
+                              : task.status === "success"
+                                ? "待发布"
+                                : "失败"}
+                        </Tag>
+                      </div>
+                      <Progress
+                        percent={task.percent}
+                        status={
+                          task.status === "error"
+                            ? "exception"
+                            : task.status === "success"
+                              ? "success"
+                              : "active"
+                        }
+                      />
+                      <div className="upload-size">
+                        {(task.loaded / 1024 / 1024).toFixed(2)} MB /{" "}
+                        {(task.total / 1024 / 1024).toFixed(2)} MB ·{" "}
+                        {task.percent}%
+                        {task.error && (
+                          <span className="upload-error"> · {task.error}</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -589,7 +863,7 @@ function App() {
                     title: "封面",
                     dataIndex: "thumbnail",
                     render: (x, video) => (
-                      <Image
+                      <EncryptedCoverImage
                         src={x}
                         alt={`${video.title}封面`}
                         width={96}
@@ -600,6 +874,22 @@ function App() {
                     ),
                   },
                   { title: "标题", dataIndex: "title" },
+                  {
+                    title: "分类",
+                    render: (_, video) =>
+                      (video.categoryIds || []).length ? (
+                        <Space wrap>
+                          {(video.categoryIds || []).map((id) => (
+                            <Tag key={id} color="blue">
+                              {categories.find((x) => x.id === id)?.name ||
+                                "已删除分类"}
+                            </Tag>
+                          ))}
+                        </Space>
+                      ) : (
+                        "-"
+                      ),
+                  },
                   {
                     title: "时长",
                     dataIndex: "duration",
@@ -626,7 +916,13 @@ function App() {
                     dataIndex: "status",
                     render: (x) => (
                       <Tag color={x === "published" ? "green" : "default"}>
-                        {x === "published" ? "已发布" : x === "draft" ? "待发布" : x === "processing" ? "处理中" : "已下架"}
+                        {x === "published"
+                          ? "已发布"
+                          : x === "draft"
+                            ? "待发布"
+                            : x === "processing"
+                              ? "处理中"
+                              : "已下架"}
                       </Tag>
                     ),
                   },
@@ -644,7 +940,14 @@ function App() {
                         <Button icon={<EditOutlined />} onClick={() => edit(v)}>
                           编辑
                         </Button>
-                        <Button onClick={() => { const url=`${location.origin}${location.pathname}#cover/${encodeURIComponent(v.id)}`;window.open(url,"_blank","noopener,noreferrer"); }}>封面编辑</Button>
+                        <Button
+                          onClick={() => {
+                            const url = `${location.origin}${location.pathname}#cover/${encodeURIComponent(v.id)}`;
+                            window.open(url, "_blank", "noopener,noreferrer");
+                          }}
+                        >
+                          封面编辑
+                        </Button>
                         <Button onClick={() => editNodes(v)}>精彩标签</Button>
                         <Button
                           danger
@@ -718,7 +1021,11 @@ function App() {
                 </>
               )}
               {editing && (
-                <img src={editing.thumbnail} className="edit-cover" />
+                <EncryptedCoverImage
+                  src={editing.thumbnail}
+                  className="edit-cover"
+                  preview={false}
+                />
               )}
               <Form.Item
                 name="title"
@@ -727,8 +1034,19 @@ function App() {
               >
                 <Input />
               </Form.Item>
-              <Form.Item name="description" label="简介">
+              <Form.Item name="description" label="内容">
                 <Input.TextArea rows={4} />
+              </Form.Item>
+              <Form.Item name="categoryIds" label="视频分类">
+                <Select
+                  mode="multiple"
+                  allowClear
+                  placeholder="选择一个或多个分类"
+                  options={categories.map((item) => ({
+                    label: item.name,
+                    value: item.id,
+                  }))}
+                />
               </Form.Item>
               <Form.Item name="tags" label="标签（逗号分隔）">
                 <Input />
@@ -772,7 +1090,9 @@ function App() {
                       className="common-tags-toggle"
                       onClick={() => setCommonTagsExpanded((value) => !value)}
                     >
-                      {commonTagsExpanded ? "收起" : `展开全部（${tags.length}）`}
+                      {commonTagsExpanded
+                        ? "收起"
+                        : `展开全部（${tags.length}）`}
                     </Button>
                   )}
                 </div>
@@ -804,7 +1124,7 @@ function App() {
           </Modal>
           <Modal
             open={!!nodeVideo}
-            title={`精彩文字标签${nodeVideo ? ` · ${nodeVideo.title}` : ""}`}
+            title={`精彩截图与文字标签${nodeVideo ? ` · ${nodeVideo.title}` : ""}`}
             width={860}
             onCancel={() => setNodeVideo(undefined)}
             footer={
@@ -845,7 +1165,95 @@ function App() {
                   controls
                   playsInline
                   className="node-video"
+                  onLoadedMetadata={(event) => {
+                    if (nodeVideo.trimStart)
+                      event.currentTarget.currentTime = nodeVideo.trimStart;
+                  }}
+                  onTimeUpdate={(event) => {
+                    if (
+                      nodeVideo.trimEnd &&
+                      Number.isFinite(event.currentTarget.duration) &&
+                      event.currentTarget.currentTime >=
+                        event.currentTarget.duration - nodeVideo.trimEnd
+                    )
+                      event.currentTarget.pause();
+                  }}
                 />
+                <div className="highlight-head">
+                  <div>
+                    <b>自动精彩截图</b>
+                    <span>
+                      {highlights.status === "processing"
+                        ? ` 正在生成 ${highlights.items.length}/${highlightCount(nodeVideo.duration)}`
+                        : highlights.status === "failed"
+                          ? ` 生成失败：${highlights.error || "未知错误"}`
+                          : ` 已生成 ${highlights.items.length}/${highlightCount(nodeVideo.duration)}`}
+                    </span>
+                  </div>
+                  <Button
+                    loading={highlights.status === "processing"}
+                    onClick={() =>
+                      nodeVideo &&
+                      api<HighlightResult>(
+                        `/admin/videos/${nodeVideo.id}/highlights/regenerate`,
+                        { method: "POST" },
+                      )
+                        .then(setHighlights)
+                        .then(() =>
+                          message.success(
+                            `已开始重新生成 ${highlightCount(nodeVideo.duration)} 张截图`,
+                          ),
+                        )
+                        .catch((e) => message.error(e.message))
+                    }
+                  >
+                    重新生成截图
+                  </Button>
+                </div>
+                <div className="highlight-grid">
+                  {highlights.items.map((item) => (
+                    <div className="highlight-item" key={item.id}>
+                      <button
+                        onClick={() => {
+                          if (nodePlayer.current) {
+                            nodePlayer.current.currentTime =
+                              item.time + (nodeVideo.trimStart || 0);
+                            nodePlayer.current.pause();
+                          }
+                        }}
+                      >
+                        <EncryptedCoverImage src={item.image} preview={false} />
+                        <span>{formatDuration(item.time)}</span>
+                      </button>
+                      <Popconfirm
+                        title="删除后系统会自动从该时间区间补充一张"
+                        onConfirm={() =>
+                          nodeVideo &&
+                          api(
+                            `/admin/videos/${nodeVideo.id}/highlights/${item.id}`,
+                            { method: "DELETE" },
+                          )
+                            .then(() => {
+                              setHighlights((value) => ({
+                                ...value,
+                                status: "processing",
+                                items: value.items.filter(
+                                  (x) => x.id !== item.id,
+                                ),
+                              }));
+                              message.success("已删除，正在自动补充");
+                            })
+                            .catch((e) => message.error(e.message))
+                        }
+                      >
+                        <Button danger size="small">
+                          删除并补充
+                        </Button>
+                      </Popconfirm>
+                    </div>
+                  ))}
+                </div>
+                <div className="text-tag-divider">可选：人工文字标签</div>
                 <div className="node-add">
                   <Input
                     value={nodeLabel}

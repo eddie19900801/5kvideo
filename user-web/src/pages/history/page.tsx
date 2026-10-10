@@ -3,6 +3,7 @@ import type { MockVideo } from '@/mocks/videos';
 import { useVideo } from '@/contexts/VideoContext';
 import BottomNav from '@/components/base/BottomNav';
 import { useMode } from '@/contexts/ModeContext';
+import { EncryptedCover } from '@/components/base/EncryptedCover';
 
 function formatTime(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -97,7 +98,7 @@ export default function History() {
                         record.video.aspectRatio === 'portrait' ? 'w-[72px] h-24' : 'w-32 h-[72px]'
                       }`}
                     >
-                      <img
+                      <EncryptedCover
                         src={record.video.thumbnail}
                         alt={record.video.title}
                         className="w-full h-full object-cover"

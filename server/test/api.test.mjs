@@ -152,6 +152,18 @@ test('public video responses use signed playback URLs and reject unsigned stream
   const detail = await api('/api/v1/videos/demo-1');
   assert.equal(detail.response.status, 200);
   assert.match(detail.payload.data.playbackUrl, /signature=/);
+  assert.match(detail.payload.data.playbackUrl, /viewer=/);
+  assert.match(detail.payload.data.playbackUrl, /mode=normal/);
+
+  const playbackCookie = detail.response.headers.get('set-cookie')?.split(';')[0];
+  assert.ok(playbackCookie);
+  const boundPlayback = await fetch(detail.payload.data.playbackUrl, { headers: { Cookie: playbackCookie } });
+  assert.notEqual(boundPlayback.status, 403);
+  const stolenPlayback = await fetch(detail.payload.data.playbackUrl);
+  assert.equal(stolenPlayback.status, 403);
+  const wrongModeUrl = new URL(detail.payload.data.playbackUrl);
+  wrongModeUrl.searchParams.set('mode', 'adult');
+  assert.equal((await fetch(wrongModeUrl, { headers: { Cookie: playbackCookie } })).status, 403);
 
   const unsigned = await api('/api/v1/videos/demo-1/stream.m3u8');
   assert.equal(unsigned.response.status, 403);
@@ -261,4 +273,13 @@ test('public metadata routes expose normalized tag usage without authentication'
   const chapterTags = await api('/api/v1/chapter-tags');
   assert.equal(chapterTags.response.status, 200);
   assert.ok(Array.isArray(chapterTags.payload.data));
+});
+
+test('playback URL issuance is rate limited', async () => {
+  let limited = false;
+  for (let attempt = 0; attempt < 70; attempt++) {
+    const response = await fetch(`${origin}/api/v1/videos/demo-1/playback`);
+    if (response.status === 429) { limited = true; break; }
+  }
+  assert.equal(limited, true);
 });

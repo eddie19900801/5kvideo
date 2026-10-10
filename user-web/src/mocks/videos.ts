@@ -10,6 +10,10 @@ export interface MockVideo {
   aspectRatio: 'landscape' | 'portrait';
   chapters: { label: string; time: number }[];
   playbackUrl?: string;
+  sourceType?: 'local' | 'external';
+  trimStart?: number;
+  trimEnd?: number;
+  highlights?: { id: string; time: number; slot: number; image: string }[];
 }
 
 export const hotTags: string[] = [

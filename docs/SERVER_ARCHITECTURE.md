@@ -71,6 +71,22 @@ PostgreSQL 初始结构位于 `server/migrations/001_initial.sql`。配置 `DATA
 `npm run db:migrate`，再用 `npm run db:import-json` 幂等导入现有 JSON 数据。当前线上运行时仍默认
 使用 JSON Repository；正式切换前需要将领域 Repository 的异步 PostgreSQL 实现接入并完成双写验证。
 
+## 播放访问控制
+
+API 使用 HttpOnly `playback_viewer` Cookie 标识登录用户或匿名会话。播放签名同时覆盖视频 ID、观看者、
+内容模式和过期时间，HLS 清单与分片请求均重复验证；R2 分片由 API 验证后代理，不向播放器暴露可转发的
+R2 签名地址。播放地址签发限制为每 IP 每分钟 60 次。媒体 Worker 的浏览器 CORS 仅允许
+`https://5k.ag`、`https://www.5k.ag`、`https://admin.5k.ag` 和 `https://ikumep.cn`，无 Origin 的服务端/桌面客户端签名请求不受
+浏览器 CORS 限制。
+
+## 封面加密存储
+
+- 后台保存最终封面时，服务端使用 AES-256-GCM 加密后上传 Cloudflare R2。
+- 数据库只保存 `r2enc://桶名/对象键`，不保存固定域名或公开图片地址。
+- 前端取得密文后在浏览器内解密为临时 Blob URL，直接打开密文接口不能显示图片。
+- 旧本地封面和普通 R2 封面继续兼容；新保存的封面自动采用加密格式。
+- 该方案用于防直链及普通采集，无法阻止终端截图或高级脚本提取已经呈现的画面。
+
 1. 为 PostgreSQL 实现异步领域 Repository，并进行 JSON/PostgreSQL 双写校验。
 2. 管理端接入异步上传任务状态，稳定后下线同步 FFmpeg 接口。
 3. 将单进程 JSON 任务认领升级为 PostgreSQL `FOR UPDATE SKIP LOCKED` 或专用队列。

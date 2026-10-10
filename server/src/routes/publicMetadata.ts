@@ -38,3 +38,5 @@ publicMetadataRouter.get("/chapter-tags", (_, res) => {
       .sort((a, b) => b.usageCount - a.usageCount || a.name.localeCompare(b.name)),
   );
 });
+
+publicMetadataRouter.get("/categories",(_,res)=>{const database=databaseRepository.read();return ok(res,database.categories.map(item=>({id:item.id,name:item.name,videoCount:database.videos.filter(video=>(video.categoryIds||[]).includes(item.id)).length})).sort((a,b)=>a.name.localeCompare(b.name,"zh-CN")))});

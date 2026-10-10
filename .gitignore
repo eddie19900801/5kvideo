@@ -6,3 +6,9 @@ server/data/
 *.log
 *.tsbuildinfo
 .DS_Store
+__pycache__/
+*.pyc
+*.apk
+*.tgz
+downloads/
+.asset-headers.txt

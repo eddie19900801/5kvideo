@@ -1,0 +1,1 @@
+*/5 * * * * root /usr/local/bin/refresh-5knews-bootstrap >/var/log/5knews-bootstrap.log 2>&1

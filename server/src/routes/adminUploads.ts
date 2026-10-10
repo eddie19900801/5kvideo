@@ -13,9 +13,11 @@ import { datedMediaFile } from "../services/mediaFiles.js";
 import {
   normalizeSeconds,
   requestOrigin,
+  signedPlaybackUrl,
   signedR2Url,
   videoForRequest,
 } from "../services/playback.js";
+import { generateMissingHighlights } from "../services/highlightGenerator.js";
 import { normalizeTags } from "../services/videoMetadata.js";
 import type { Video } from "../types.js";
 
@@ -124,6 +126,8 @@ adminUploadsRouter.post("/r2/uploads/complete", (req: AuthRequest, res) => {
         )
         .max(500)
         .default([]),
+      highlightTimes:z.array(z.number().min(0)).max(20).default([]),
+      categoryIds:z.array(z.string().uuid()).min(1).max(20),
       duration: z.number().positive(),
       aspectRatio: z.enum(["portrait", "landscape"]),
       isAdult: z.boolean(),
@@ -141,6 +145,8 @@ adminUploadsRouter.post("/r2/uploads/complete", (req: AuthRequest, res) => {
     description: input.data.description,
     tags: normalizeTags(input.data.tags),
     chapters: input.data.chapters,
+    highlightTimes: input.data.highlightTimes,
+    categoryIds:input.data.categoryIds,
     duration: normalizeSeconds(input.data.duration),
     aspectRatio: input.data.aspectRatio,
     isAdult: input.data.isAdult,
@@ -170,6 +176,7 @@ adminUploadsRouter.post("/r2/uploads/complete", (req: AuthRequest, res) => {
       createdAt: now,
     });
   });
+  generateMissingHighlights(video.id,signedPlaybackUrl(req,video.id,video.playbackUrl,video.isAdult,'cover'),req.auth!.id);
   return ok(res, videoForRequest(req, video));
 });
 

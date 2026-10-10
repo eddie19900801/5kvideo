@@ -33,8 +33,14 @@ function cacheKey(url: URL, key: string) {
   return new Request(`${url.origin}/${pathname}`, { method: "GET" });
 }
 
-function cors(headers = new Headers()) {
-  headers.set("Access-Control-Allow-Origin", "*");
+const allowedOrigins = new Set(["https://5k.ag", "https://www.5k.ag", "https://admin.5k.ag", "https://ikumep.cn", "https://wflhc.cn", "https://www.wflhc.cn", "https://5knews.wflhc.cn"]);
+
+function cors(request: Request, headers = new Headers()) {
+  const origin = request.headers.get("Origin");
+  if (origin && allowedOrigins.has(origin)) {
+    headers.set("Access-Control-Allow-Origin", origin);
+    headers.set("Vary", "Origin");
+  }
   headers.set("Access-Control-Allow-Methods", "GET, HEAD, PUT, OPTIONS");
   headers.set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Range");
   headers.set("Access-Control-Expose-Headers", "ETag, Content-Length, Content-Range, Accept-Ranges, X-Media-Cache");
@@ -44,7 +50,11 @@ function cors(headers = new Headers()) {
 export default {
   async fetch(request, env, ctx): Promise<Response> {
     const url = new URL(request.url);
-    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors() });
+    if (request.method === "OPTIONS") {
+      const origin = request.headers.get("Origin");
+      if (!origin || !allowedOrigins.has(origin)) return new Response("Forbidden", { status: 403 });
+      return new Response(null, { status: 204, headers: cors(request) });
+    }
     const key = safeKey(url), expires = Number(url.searchParams.get("expires")), provided = url.searchParams.get("signature") || "";
     if (!key || !Number.isFinite(expires) || expires < Date.now() || expires > Date.now() + 2 * 60 * 60 * 1000)
       return new Response("Forbidden", { status: 403 });
@@ -59,7 +69,7 @@ export default {
       if (!request.body || length < 1 || length > 32 * 1024 * 1024) return new Response("Invalid size", { status: 413 });
       const object = await env.MEDIA.put(key, request.body, { httpMetadata: { contentType: type } });
       ctx.waitUntil(caches.default.delete(cacheKey(url, key)));
-      return new Response(JSON.stringify({ key, etag: object.httpEtag }), { headers: cors(new Headers({ "Content-Type": "application/json", ETag: object.httpEtag })) });
+      return new Response(JSON.stringify({ key, etag: object.httpEtag }), { headers: cors(request, new Headers({ "Content-Type": "application/json", ETag: object.httpEtag })) });
     }
     if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method Not Allowed", { status: 405 });
     const range = request.headers.get("range");
@@ -67,7 +77,7 @@ export default {
     if (!range) {
       const cached = await caches.default.match(sharedCacheKey);
       if (cached) {
-        const headers = cors(new Headers(cached.headers));
+        const headers = cors(request, new Headers(cached.headers));
         headers.set("X-Media-Cache", "HIT");
         return new Response(request.method === "HEAD" ? null : cached.body, {
           status: cached.status,
@@ -77,7 +87,7 @@ export default {
     }
     const object = await env.MEDIA.get(key, range ? { range: request.headers } : undefined);
     if (!object) return new Response("Not Found", { status: 404 });
-    const headers = cors(new Headers({ ETag: object.httpEtag, "Content-Type": object.httpMetadata?.contentType || contentType(key), "Accept-Ranges": "bytes" }));
+    const headers = cors(request, new Headers({ ETag: object.httpEtag, "Content-Type": object.httpMetadata?.contentType || contentType(key), "Accept-Ranges": "bytes" }));
     object.writeHttpMetadata(headers);
     if ("range" in object && object.range) {
       const r = object.range;

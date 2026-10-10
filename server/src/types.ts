@@ -8,11 +8,25 @@ export interface Video {
   duration: number;
   tags: string[];
   chapters?: { id: string; label: string; time: number }[];
+  highlights?: { id: string; time: number; slot: number; image: string; source: "auto" | "manual"; createdAt: string }[];
+  highlightStatus?: "idle" | "processing" | "ready" | "failed";
+  highlightError?: string;
+  highlightTimes?: number[];
+  categoryIds?: string[];
   views: number;
   aspectRatio: "landscape" | "portrait";
   isAdult: boolean;
   status: VideoStatus;
   createdAt: string;
+  sourceType?: "local" | "external";
+  externalSource?: {
+    sourceKey: string;
+    remoteId: string;
+    remoteUpdatedAt?: string;
+    importedAt: string;
+  };
+  trimStart?: number;
+  trimEnd?: number;
 }
 export interface User {
   id: string;
@@ -67,6 +81,7 @@ export interface Database {
   videos: Video[];
   users: User[];
   tags: { id: string; name: string; createdAt: string }[];
+  categories: { id: string; name: string; createdAt: string }[];
   favorites: { userId: string; videoId: string; createdAt: string; mode?: "normal" | "adult" }[];
   progress: Progress[];
   analyticsEvents: AnalyticsEvent[];

@@ -4,10 +4,23 @@ const INSTALL_KEY = '5k_install_id';
 const SESSION_KEY = '5k_session_id';
 const FIRST_OPEN_KEY = '5k_first_open_sent';
 
+function createId() {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).reduce(
+    (id, byte, index) => id + ([4, 6, 8, 10].includes(index) ? '-' : '') + byte,
+    '',
+  );
+}
+
 function stableId(key: string) {
   let value = localStorage.getItem(key);
   if (!value) {
-    value = crypto.randomUUID();
+    value = createId();
     localStorage.setItem(key, value);
   }
   return value;
@@ -16,7 +29,7 @@ function stableId(key: string) {
 function sessionId() {
   let value = sessionStorage.getItem(SESSION_KEY);
   if (!value) {
-    value = crypto.randomUUID();
+    value = createId();
     sessionStorage.setItem(SESSION_KEY, value);
   }
   return value;

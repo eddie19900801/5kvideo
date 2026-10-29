@@ -32,6 +32,7 @@ function AnalyticsTracker() {
 function App() {
   const [product, setProduct] = useState<ProductRuntime | null>(null);
   const [bootVisible, setBootVisible] = useState(true);
+  const isInstallationPage = ["/ios-installation.html", "/ios.html", "/android-installation.html"].includes(location.pathname);
   useEffect(() => { void productRuntime.load().then(setProduct); }, []);
   useEffect(() => { document.getElementById("preboot")?.remove(); }, []);
   const hideBoot = useCallback(() => setBootVisible(false), []);
@@ -51,7 +52,7 @@ function App() {
       </BrowserRouter>
     </I18nextProvider>
   );
-  return <>{content}{bootVisible && <StartupLoading ready={Boolean(product)} onDone={hideBoot} />}</>;
+  return <>{content}{bootVisible && !isInstallationPage && <StartupLoading ready={Boolean(product)} onDone={hideBoot} />}</>;
 }
 
 export default App;

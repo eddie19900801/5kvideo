@@ -74,7 +74,7 @@ try {
   await delay(7000);
   const shot = await cdp.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
   await writeFile(desktop ? "replica-reference-desktop.png" : "replica-reference-mobile.png", Buffer.from(shot.data, "base64"));
-  const page = await cdp.send("Runtime.evaluate", { returnByValue: true, expression: `JSON.stringify({url:location.href,title:document.title,text:document.body.innerText,html:document.body.innerHTML.slice(0,20000)})` });
+  const page = await cdp.send("Runtime.evaluate", { returnByValue: true, expression: `JSON.stringify({url:location.href,title:document.title,text:document.body.innerText,html:document.body.innerHTML.slice(0,20000),resources:performance.getEntriesByType('resource').map(entry=>({url:entry.name,type:entry.initiatorType,duration:Math.round(entry.duration),size:entry.transferSize})).filter(entry=>/^https?:/.test(entry.url))})` });
   await delay(800);
   await writeFile("replica-reference-data.json", JSON.stringify({ page: JSON.parse(page.result.value), responses }, null, 2));
   cdp.close();

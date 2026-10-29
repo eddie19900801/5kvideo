@@ -37,7 +37,7 @@
 |---:|---|---|---|
 | LP-001 | 已完成 | https://static-wh-231101.uiov1.com/?channel=U6II14 | 已发布至 `madou.download.wflhc.cn`，保留 `channel` |
 | LP-002 | 已完成 | https://static-wh-580709.s8r1g.com/?channel=O7yLNH | 已发布至 `huangguo.download.wflhc.cn`，保留 `channel` |
-| LP-003 | 待采集 | https://img-cache-072137.3zm8j.com/?channel=EU5bkG | 保留 `channel` |
+| LP-003 | 已完成 | https://img-cache-072137.3zm8j.com/?channel=EU5bkG | 已发布至 `haijiao.download.wflhc.cn`，保留 `channel` |
 | LP-004 | 待采集 | https://ew.eqznkgthhehfoahrgkupnelojn.com/fhs2/28456/lS53gK | 路径型渠道 |
 | LP-005 | 待采集 | https://m-res-418478.35n7s.com/?channel=tWFqC2 | 保留 `channel` |
 | LP-006 | 待采集 | https://a52.upcissxzgwmvsswhqyttwchdls.com/hz8kq/57334/9fb9Q8 | 路径型渠道 |
@@ -131,6 +131,22 @@
 - 验收：独立 HTTPS 证书、H5 长图、PC 横版、骨架加载、Android APK、iOS 描述文件、独立 `ios-installation.html` 安装教程和下载配置均已验证。
 - 验收截图：`huangguo-live-mobile.png`、`huangguo-live-desktop.png`。
 
+### LP-003 · 海角
+
+- 完成时间：2026-10-29（Asia/Bangkok）
+- 产品标识：`haijiao`
+- 产品主页：`https://haijiao.app.wflhc.cn/`
+- 落地页：`https://haijiao.download.wflhc.cn/`
+- iOS 安装页：`https://haijiao.download.wflhc.cn/ios.html`
+- Android 包名：`cn.k897kg.haijiao`
+- 产品 ID：`3610800c-b72c-4dab-843c-d8af56dea138`
+- 发布版本：`1`
+- 前端版本：`20261029-haijiao-final`
+- 加密资源：22 个页面图片资源，统一存储在 `spovhe.cn` 的 `landing` 项目中，线上不保存明文素材。
+- 渠道归因：保留 `channel`，不存在的渠道回退自然流量；落地页展示和下载点击仍记录原始渠道值。
+- 验收：独立 HTTPS 证书、H5 长页、PC 横版、图片骨架、二维码、Android APK、iOS 描述文件及独立 `ios.html` 安装页均已验证。
+- 验收截图：`haijiao-live-mobile-final.png`、`haijiao-live-desktop-final2.png`、`haijiao-live-ios-final.png`。
+
 ## 动漫落地页
 
 | ID | 状态 | 原始地址 | 备注 |
@@ -151,7 +167,8 @@
 
 - 原始记录：74 条。
 - 完全重复：1 条（LP-020 与 LP-016）。
-- 独立待复刻页面：73 个。
+- 已完成：3 个。
+- 独立待复刻页面：70 个。
 - 常规独立页面：62 个。
 - 动漫页面：11 个。
 

@@ -64,6 +64,7 @@
 | LP-026 | 已完成 | https://daw3xqm04zuns.cloudfront.net/?dc=CZZ29825 | “91短剧”；复用后台产品 `91短剧|91duanju` 并保留原分类；从原站 APK 提取 `res/mipmap-xxhdpi/ic_launcher.webp` 真实图标并加密入库；发布至 `https://91duanju.download.wflhc.cn/?dc=CZZ29825` |
 | LP-027 | 已完成 | https://cxkmwj.g45mzx0.com/xgys-npjnwydi | “糖心漫剧”；复用后台产品 `溏心漫剧|tangxinmanju` 并保留原分类；从原站 APK 提取 `res/RJ.png` 真实图标并加密入库；发布至 `https://tangxinmanju.download.wflhc.cn/` |
 | LP-028 | 已完成 | https://d3n0ifaw77lbny.cloudfront.net/?dc=mvhsijbd | “黄火短剧”；复用后台产品 `黄火短剧|huanghuoduanju` 并保留原分类；从原站 APK 提取 `res/mipmap-mdpi/ic_launcher.png` 真实图标并加密入库；发布至 `https://huanghuoduanju.download.wflhc.cn/?dc=mvhsijbd` |
+| LP-029 | 已完成 | https://d22tj1j5cuqqy8.cloudfront.net/?dc=CZZ29827 | “黄瓜短剧”；复用后台产品 `黄瓜短剧|huangguaduanju` 并保留原分类；从原站 APK 提取 `res/mipmap-mdpi/ic_launcher.png` 真实图标并加密入库；发布至 `https://huangguaduanju.download.wflhc.cn/?dc=CZZ29827` |
 | LP-025 | 待采集 | https://coffee.5zzx6ko.com/?_c=xpfk115tx | 保留 `_c` |
 | LP-026 | 待采集 | https://daw3xqm04zuns.cloudfront.net/?dc=CZZ29825 | 保留 `dc` |
 | LP-027 | 待采集 | https://cxkmwj.g45mzx0.com/xgys-npjnwydi | 路径型渠道 |

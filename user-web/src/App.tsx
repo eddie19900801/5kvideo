@@ -15,6 +15,7 @@ import HuangdouLandingPage from "./pages/huangdou-landing/page";
 import MadouLandingPage from "./pages/madou-landing/page";
 import HuangguoLandingPage from "./pages/huangguo-landing/page";
 import HuangguoIosInstallation from "./pages/huangguo-landing/ios-installation";
+import { HuangguoAndroidInstallation, HuangguoIosStore } from "./pages/huangguo-landing/installation-pages";
 import StartupLoading from "./components/StartupLoading";
 
 function AnalyticsTracker() {
@@ -38,7 +39,7 @@ function App() {
   if (product?.hostMode === "landing" && product.slug === "91xueyuan") content = <ProductLandingPage product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "huangdou") content = <HuangdouLandingPage product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "madou") content = <MadouLandingPage product={product} />;
-  else if (product?.hostMode === "landing" && product.slug === "huangguo") content = location.pathname === "/ios-installation.html" ? <HuangguoIosInstallation product={product} /> : <HuangguoLandingPage product={product} />;
+  else if (product?.hostMode === "landing" && product.slug === "huangguo") content = location.pathname === "/ios-installation.html" ? <HuangguoIosInstallation product={product} /> : location.pathname === "/ios.html" ? <HuangguoIosStore product={product} /> : location.pathname === "/android-installation.html" ? <HuangguoAndroidInstallation product={product} /> : <HuangguoLandingPage product={product} />;
   else if (product?.hostMode === "landing" && product.landingPage === null) content = <main aria-label="落地页待配置" className="min-h-screen bg-white" />;
   else if (product) content = (
     <I18nextProvider i18n={i18n}>

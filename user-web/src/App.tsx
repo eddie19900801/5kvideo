@@ -24,6 +24,7 @@ import Lolita from "./pages/lolita-landing/page";
 import SmCommunity from "./pages/smcommunity-landing/page";
 import DarkDouyin from "./pages/dark-douyin-landing/page";
 import Bilio from "./pages/bilio-landing/page";
+import Short91 from "./pages/short91-landing/page";
 import StartupLoading from "./components/StartupLoading";
 
 function AnalyticsTracker() {
@@ -56,6 +57,7 @@ function App() {
   else if (product?.hostMode === "landing" && (product.slug === "smshequ" || product.slug === "smcommunity")) content = <SmCommunity product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "anheidouyin18") content = <DarkDouyin product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "bilio3") content = <Bilio product={product} />;
+  else if (product?.hostMode === "landing" && product.slug === "91duanship") content = <Short91 product={product} />;
   else if (product?.hostMode === "landing" && product.landingPage === null) content = <main aria-label="落地页待配置" className="min-h-screen bg-white" />;
   else if (product) content = (
     <I18nextProvider i18n={i18n}>

@@ -6,7 +6,7 @@ base=http://127.0.0.1:4010/api/v1
 list="$(curl -fsS "$base/admin/product-lines" -H "Authorization: Bearer $token")"
 id="$(jq -r '.data[]|select(.slug=="huangguo")|.id'<<<"$list"|head -1)"
 if [[ -z "$id" ]];then
-  created="$(curl -fsS -X POST "$base/admin/product-lines" -H "Authorization: Bearer $token" -H 'Content-Type: application/json' --data '{"name":"黄果短剧","slug":"huangguo","iconUrl":"https://spovhe.cn/v1/assets/landing/82dd82fc-0b0d-4aef-a7c0-ebbd35c8da1f.enc","recommendationCategoryIds":[],"recommendationKeywords":["短剧","AI短剧","魔改"],"recommendationVideoIds":[],"recommendationStrategy":"stable"}')"
+  created="$(curl -fsS -X POST "$base/admin/product-lines" -H "Authorization: Bearer $token" -H 'Content-Type: application/json' --data '{"name":"黄果短剧","slug":"huangguo","iconUrl":"https://spovhe.cn/v1/assets/landing/8c9eaf34-6aa3-4eb0-93ff-53a2ace57054.enc","recommendationCategoryIds":[],"recommendationKeywords":["短剧","AI短剧","魔改"],"recommendationVideoIds":[],"recommendationStrategy":"stable"}')"
   id="$(jq -r '.data.id'<<<"$created")"
 fi
 curl -fsS -X POST "$base/admin/product-lines/$id/publish" -H "Authorization: Bearer $token"|jq '{data:{id:.data.id,name:.data.name,slug:.data.slug,url:.data.url,landingUrl:.data.landingUrl,status:.data.status,version:.data.version}}'

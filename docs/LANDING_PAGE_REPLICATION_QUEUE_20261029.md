@@ -72,6 +72,8 @@
 | LP-034 | 已完成 | https://d1talkbjsk4wt1.cloudfront.net/?dc=yjwxmgs04a | “撸撸短剧”；复用后台产品 `撸撸短剧|luluduanju` 并保留原分类；从原站 APK 提取 `res/mipmap-xxhdpi/ic_launcher.webp` 真实图标并加密入库；发布至 `https://luluduanju.download.wflhc.cn/?dc=yjwxmgs04a` |
 | LP-035 | 已完成 | https://e5tz.mjepihrp.shop/?dc=GIGI05 | “萝幼社”；复用后台产品 `萝幼社|luoyoushe` 并保留原分类；从混淆 APK 的无扩展名资源中识别并提取 510×510 PNG 真实图标，页面截图与素材加密入库；发布至 `https://luoyoushe.download.wflhc.cn/?dc=GIGI05` |
 | LP-036 | 已完成 | https://ba5.ccuk78c7c.cc/chan/ak0030/ZDvc | “男同网”；复用后台产品 `男同网|nantongwang` 并保留原分类；从原站 APK `res/9w.png` 提取真实图标并加密入库；保留路径渠道 `ZDvc`；发布至 `https://nantongwang.download.wflhc.cn/chan/ak0030/ZDvc` |
+| LP-037 | 重复（已处理） | https://39b31.ywafrtcpf.cc/chan/lldapp1951/PTWs | 原站接口及 APK 标识确认是“萝莉岛”；该产品已在 LP-007 完成页面、真实 APK 图标、加密资源、安装包及线上验收，本条不重复覆盖 |
+| LP-038 | 已完成 | https://b0eeb.tauyhggx.com/chan/st1399/qTQA | “搜同社区”；复用后台产品 `搜同社区|soutongshequ` 并保留原分类；从原站 APK `res/o-.png` 提取 192×192 真实图标，移动端核心素材加密入库；保留路径渠道 `qTQA`；发布至 `https://soutongshequ.download.wflhc.cn/chan/st1399/qTQA` |
 | LP-025 | 待采集 | https://coffee.5zzx6ko.com/?_c=xpfk115tx | 保留 `_c` |
 | LP-026 | 待采集 | https://daw3xqm04zuns.cloudfront.net/?dc=CZZ29825 | 保留 `dc` |
 | LP-027 | 待采集 | https://cxkmwj.g45mzx0.com/xgys-npjnwydi | 路径型渠道 |

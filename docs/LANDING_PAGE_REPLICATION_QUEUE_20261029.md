@@ -49,7 +49,7 @@
 | LP-012 | 已完成 | https://8fde.ln9llwwv.cc/chan-6159/aff-nd7Wx | “91短视频”；复用后台产品 `91短视频|91duanship`，保留原分类；已发布至 `https://91duanship.download.wflhc.cn/`，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-013 | 已完成 | https://fsadsf3g43g.pxz5y9.com/dy-tdy1506 | “抖阴”；复用后台产品 `抖阴|douyin`，保留原分类；已发布至 `https://douyin.download.wflhc.cn/`，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-014 | 已完成 | https://52c67.hj52u93m.com/chan/GS4747/aU92s | “P站”；复用后台产品 `P站|pzhan` 并保留原分类；已发布至 `https://pzhan.download.wflhc.cn/`，加密资源、APK、iOS 与移动页面验收通过 |
-| LP-015 | 待复刻（复用产品） | https://mmxz.gcpfvrehlh.vip/?_c=xmflxb | 识别为“杏吧”；复用后台产品 `杏吧|xingba`，仍需完成本批落地页复刻与验收 |
+| LP-015 | 已完成 | https://mmxz.gcpfvrehlh.vip/?_c=xmflxb | “杏吧”；复用后台产品 `杏吧|xingba` 并保留原分类；已发布至 `https://xingba.download.wflhc.cn/`，保留 `_c` 参数，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-016 | 待复刻（复用产品） | https://846a.khnbeh5gc.cc/aff-fFRGU | 识别为“妻友”；复用后台产品 `妻友|qiiyou`，仍需完成本批落地页复刻与验收 |
 | LP-017 | 待采集 | https://3b737.0lmbi8ar.cc/chan/GS6735/m2UZB | 路径型渠道 |
 | LP-018 | 待采集 | https://dshnlf0acb1n2.cloudfront.net/?dc=yjwxmgs07 | 保留 `dc` |

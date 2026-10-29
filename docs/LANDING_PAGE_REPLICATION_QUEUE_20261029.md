@@ -65,6 +65,10 @@
 | LP-027 | 已完成 | https://cxkmwj.g45mzx0.com/xgys-npjnwydi | “糖心漫剧”；复用后台产品 `溏心漫剧|tangxinmanju` 并保留原分类；从原站 APK 提取 `res/RJ.png` 真实图标并加密入库；发布至 `https://tangxinmanju.download.wflhc.cn/` |
 | LP-028 | 已完成 | https://d3n0ifaw77lbny.cloudfront.net/?dc=mvhsijbd | “黄火短剧”；复用后台产品 `黄火短剧|huanghuoduanju` 并保留原分类；从原站 APK 提取 `res/mipmap-mdpi/ic_launcher.png` 真实图标并加密入库；发布至 `https://huanghuoduanju.download.wflhc.cn/?dc=mvhsijbd` |
 | LP-029 | 已完成 | https://d22tj1j5cuqqy8.cloudfront.net/?dc=CZZ29827 | “黄瓜短剧”；复用后台产品 `黄瓜短剧|huangguaduanju` 并保留原分类；从原站 APK 提取 `res/mipmap-mdpi/ic_launcher.png` 真实图标并加密入库；发布至 `https://huangguaduanju.download.wflhc.cn/?dc=CZZ29827` |
+| LP-030 | 重复（已处理） | https://da86o9ekiq7bn.cloudfront.net/?dc=CZZ29826 | 识别为“禁果短剧”；该产品已在 LP-023 完成独立页面、真实 APK 图标、加密资源、安装包和线上验收，本来源不重复覆盖产品 |
+| LP-031 | 重复（已处理） | https://92815.jzgcopdz.cc/chan/ak0017/acSMd | 识别为“黄果短剧”；该产品已在 LP-002 完成复刻、iOS 安装引导、真实 APK 图标、安装包和线上验收，本渠道来源不重复覆盖产品 |
+| LP-032 | 重复（已处理） | https://04e2.ilmngymu.cc/chan/ak0013/aczZJ | 识别为“黄果短剧”；该产品已在 LP-002 完整处理，本条是同产品的另一渠道模板，不重复覆盖现有产品和分类 |
+| LP-033 | 已完成 | https://dn246e9f12v5d.cloudfront.net/?dc=XMCPT | “蜜柚短剧”；复用后台产品 `蜜柚短剧|miyouduanju` 并保留原分类；原站下载 API 参数异常且硬编码备用 APK 实际属于其他产品，未误用错误图标，临时采用原站品牌 Logo 加密入库；发布至 `https://miyouduanju.download.wflhc.cn/?dc=XMCPT` |
 | LP-025 | 待采集 | https://coffee.5zzx6ko.com/?_c=xpfk115tx | 保留 `_c` |
 | LP-026 | 待采集 | https://daw3xqm04zuns.cloudfront.net/?dc=CZZ29825 | 保留 `dc` |
 | LP-027 | 待采集 | https://cxkmwj.g45mzx0.com/xgys-npjnwydi | 路径型渠道 |

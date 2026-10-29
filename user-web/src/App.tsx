@@ -45,6 +45,7 @@ import Huanggua from "./pages/huangguaduanju-landing/page";
 import Miyou from "./pages/miyouduanju-landing/page";
 import Lulu from "./pages/luluduanju-landing/page";
 import Luoyou from "./pages/luoyoushe-landing/page";
+import Nantong from "./pages/nantongwang-landing/page";
 import StartupLoading from "./components/StartupLoading";
 
 function AnalyticsTracker() {
@@ -98,6 +99,7 @@ function App() {
   else if (product?.hostMode === "landing" && product.slug === "miyouduanju") content = <Miyou product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "luluduanju") content = <Lulu product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "luoyoushe") content = <Luoyou product={product} />;
+  else if (product?.hostMode === "landing" && product.slug === "nantongwang") content = <Nantong product={product} />;
   else if (product?.hostMode === "landing" && product.landingPage === null) content = <main aria-label="落地页待配置" className="min-h-screen bg-white" />;
   else if (product) content = (
     <I18nextProvider i18n={i18n}>

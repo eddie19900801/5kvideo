@@ -71,6 +71,7 @@
 | LP-033 | 已完成 | https://dn246e9f12v5d.cloudfront.net/?dc=XMCPT | “蜜柚短剧”；复用后台产品 `蜜柚短剧|miyouduanju` 并保留原分类；原站下载 API 参数异常且硬编码备用 APK 实际属于其他产品，未误用错误图标，临时采用原站品牌 Logo 加密入库；发布至 `https://miyouduanju.download.wflhc.cn/?dc=XMCPT` |
 | LP-034 | 已完成 | https://d1talkbjsk4wt1.cloudfront.net/?dc=yjwxmgs04a | “撸撸短剧”；复用后台产品 `撸撸短剧|luluduanju` 并保留原分类；从原站 APK 提取 `res/mipmap-xxhdpi/ic_launcher.webp` 真实图标并加密入库；发布至 `https://luluduanju.download.wflhc.cn/?dc=yjwxmgs04a` |
 | LP-035 | 已完成 | https://e5tz.mjepihrp.shop/?dc=GIGI05 | “萝幼社”；复用后台产品 `萝幼社|luoyoushe` 并保留原分类；从混淆 APK 的无扩展名资源中识别并提取 510×510 PNG 真实图标，页面截图与素材加密入库；发布至 `https://luoyoushe.download.wflhc.cn/?dc=GIGI05` |
+| LP-036 | 已完成 | https://ba5.ccuk78c7c.cc/chan/ak0030/ZDvc | “男同网”；复用后台产品 `男同网|nantongwang` 并保留原分类；从原站 APK `res/9w.png` 提取真实图标并加密入库；保留路径渠道 `ZDvc`；发布至 `https://nantongwang.download.wflhc.cn/chan/ak0030/ZDvc` |
 | LP-025 | 待采集 | https://coffee.5zzx6ko.com/?_c=xpfk115tx | 保留 `_c` |
 | LP-026 | 待采集 | https://daw3xqm04zuns.cloudfront.net/?dc=CZZ29825 | 保留 `dc` |
 | LP-027 | 待采集 | https://cxkmwj.g45mzx0.com/xgys-npjnwydi | 路径型渠道 |

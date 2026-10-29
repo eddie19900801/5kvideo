@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+admin_id="$(docker exec 5kvideo-api node --input-type=module -e 'const {initializeDatabase,readDb}=await import("./dist/db.js");await initializeDatabase();const u=readDb().users.find(x=>x.role==="admin"&&x.status==="active");process.stdout.write(u.id)')"
+token="$(docker exec -e A="$admin_id" 5kvideo-api node -e 'const j=require("jsonwebtoken");process.stdout.write(j.sign({id:process.env.A,role:"admin"},process.env.JWT_SECRET,{expiresIn:"10m"}))')"
+base=http://127.0.0.1:4010/api/v1
+id="$(curl -fsS "$base/admin/product-lines" -H "Authorization: Bearer $token"|jq -r '.data[]|select(.name=="逼哩逼哩")|.id'|head -1)"
+[[ -z "$id" ]]||{ echo "SKIP_EXISTING:$id";exit 10; }
+payload='{"name":"逼哩逼哩","slug":"bilio3","iconUrl":"https://spovhe.cn/v1/assets/landing/4b6ace45-0bbf-4659-8de3-2eda273dbc31.enc","recommendationCategoryIds":[],"recommendationKeywords":["动漫","成人动漫","二次元"],"recommendationVideoIds":[],"recommendationStrategy":"stable"}'
+id="$(curl -fsS -X POST "$base/admin/product-lines" -H "Authorization: Bearer $token" -H 'Content-Type: application/json' --data "$payload"|jq -r '.data.id')"
+curl -fsS -X POST "$base/admin/product-lines/$id/publish" -H "Authorization: Bearer $token"

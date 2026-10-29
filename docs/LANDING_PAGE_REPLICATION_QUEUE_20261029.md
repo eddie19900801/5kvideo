@@ -45,7 +45,7 @@
 | LP-008 | 已完成 | https://9x.azcumgmyqwfmgbuptfbnnadvrj.com/kz6dh/72080/wvcDNi | SM社区；复用后台同名产品 `smshequ`，不重复创建；已发布至 `smshequ.download.wflhc.cn` |
 | LP-009 | 已完成 | https://cvm.gkeqczlyrdddzapncquezrckwh.com/gkm3p/64698/gaKaBW | 暗黑抖阴；已发布至 `anheidouyin18.download.wflhc.cn`，APK 真实图标已提取 |
 | LP-010 | 重复 | https://atk.ysznhmxqhgdfrazokutafmrbpn.com/djkfe/8313/y1bVjL | 识别为“17岁”，后台已有完全同名产品 `17sui`，按规则跳过 |
-| LP-011 | 采集中 | https://d3s1kk3g0b9wiu.cloudfront.net/?dc=yjwxmgs | 识别为“逼哩逼哩”，后台无完全同名产品，继续制作并保留 `dc` |
+| LP-011 | 已完成 | https://d3s1kk3g0b9wiu.cloudfront.net/?dc=yjwxmgs | “逼哩逼哩”，已发布至 `https://bilio3.download.wflhc.cn/`；保留 `dc` 渠道参数；源 APK 已失效（404），图标采用其官方站点 favicon 并加密入库；APK/iOS 与页面均验收通过 |
 | LP-012 | 待采集 | https://8fde.ln9llwwv.cc/chan-6159/aff-nd7Wx | 路径型渠道 |
 | LP-013 | 待采集 | https://fsadsf3g43g.pxz5y9.com/dy-tdy1506 | 路径型渠道 |
 | LP-014 | 待采集 | https://52c67.hj52u93m.com/chan/GS4747/aU92s | 路径型渠道 |

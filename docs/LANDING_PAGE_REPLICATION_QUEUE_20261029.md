@@ -55,7 +55,7 @@
 | LP-018 | 已完成 | https://dshnlf0acb1n2.cloudfront.net/?dc=yjwxmgs07 | “成人快手”；复用后台产品 `成人快手|chengrenkuaishou` 并保留原分类；已发布至 `https://chengrenkuaishou.download.wflhc.cn/?dc=yjwxmgs07`，保留 `dc`，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-019 | 已完成 | https://28304.kqdlx2k14.cc/aff-eRqTD | “暗网禁区”；复用后台产品 `暗网禁区|anwangjinqu` 并保留原分类；已发布至 `https://anwangjinqu.download.wflhc.cn/aff-eRqTD`，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-020 | 重复 | https://846a.khnbeh5gc.cc/aff-fFRGU | 与 LP-016 相同，保留原始记录但不重复开发 |
-| LP-021 | 待采集 | https://hfwmeish.cc/?cCode=c1deddfc6e9e5329cd0e9913c3b4be7c | 保留 `cCode` |
+| LP-021 | 已完成 | https://hfwmeish.cc/?cCode=c1deddfc6e9e5329cd0e9913c3b4be7c | “橙涩”；复用后台产品 `橙涩|chengse` 并保留原分类；已发布至 `https://chengse.download.wflhc.cn/?cCode=c1deddfc6e9e5329cd0e9913c3b4be7c`，保留 `cCode`，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-022 | 待采集 | https://d3r7pu6nh7q7vg.cloudfront.net/?dc=hrkzngss | 保留 `dc` |
 | LP-023 | 待采集 | https://d3ikot94o90fwu.cloudfront.net/?dc=KYOHLIAW | 保留 `dc` |
 | LP-024 | 待采集 | https://d1pro9it16xrbj.cloudfront.net/?dc=GW6Al8GV | 保留 `dc` |

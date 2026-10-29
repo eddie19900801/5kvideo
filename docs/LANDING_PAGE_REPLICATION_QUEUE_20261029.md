@@ -13,7 +13,7 @@
 5. 原始图片仅进入本地私有素材目录，不部署明文素材。
 6. 素材转存到 `spovhe.cn`，以 AES-GCM 加密资源发布。
 7. 独立创建产品线、产品标识、运行配置、APP 域名和落地页域名。
-8. 保留 `channel`、`dc`、`aff`、`chan`、`code`、`cCode`、`_c`、`ch` 等来源参数，并映射为本系统渠道归因。
+8. 不继承源站的 `channel`、`dc`、`aff`、`chan`、`code`、`cCode`、`_c`、`ch` 等渠道参数；复刻页默认使用干净地址和自然流量 `direct`。
 9. 生成自然渠道及后台已有渠道的落地页、APK、iOS 描述文件和下载地址。
 10. 接入落地页访问、按钮点击、下载、安装激活和启动统计。
 11. 分别验证 390×844、430×932、1366×768、1920×1080。
@@ -55,7 +55,7 @@
 | LP-018 | 已完成 | https://dshnlf0acb1n2.cloudfront.net/?dc=yjwxmgs07 | “成人快手”；复用后台产品 `成人快手|chengrenkuaishou` 并保留原分类；已发布至 `https://chengrenkuaishou.download.wflhc.cn/?dc=yjwxmgs07`，保留 `dc`，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-019 | 已完成 | https://28304.kqdlx2k14.cc/aff-eRqTD | “暗网禁区”；复用后台产品 `暗网禁区|anwangjinqu` 并保留原分类；已发布至 `https://anwangjinqu.download.wflhc.cn/aff-eRqTD`，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-020 | 重复 | https://846a.khnbeh5gc.cc/aff-fFRGU | 与 LP-016 相同，保留原始记录但不重复开发 |
-| LP-021 | 已完成 | https://hfwmeish.cc/?cCode=c1deddfc6e9e5329cd0e9913c3b4be7c | “橙涩”；复用后台产品 `橙涩|chengse` 并保留原分类；已发布至 `https://chengse.download.wflhc.cn/?cCode=c1deddfc6e9e5329cd0e9913c3b4be7c`，保留 `cCode`，加密资源、APK、iOS 与移动页面验收通过 |
+| LP-021 | 已完成 | https://hfwmeish.cc/?cCode=c1deddfc6e9e5329cd0e9913c3b4be7c | “橙涩”；复用后台产品 `橙涩|chengse` 并保留原分类；发布地址为 `https://chengse.download.wflhc.cn/`，不继承任何源站渠道参数，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-022 | 待采集 | https://d3r7pu6nh7q7vg.cloudfront.net/?dc=hrkzngss | 保留 `dc` |
 | LP-023 | 待采集 | https://d3ikot94o90fwu.cloudfront.net/?dc=KYOHLIAW | 保留 `dc` |
 | LP-024 | 待采集 | https://d1pro9it16xrbj.cloudfront.net/?dc=GW6Al8GV | 保留 `dc` |

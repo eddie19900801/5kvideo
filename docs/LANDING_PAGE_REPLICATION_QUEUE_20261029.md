@@ -128,7 +128,7 @@
 - 前端版本：`20261029-huangguo-v1`
 - 加密资源：23 个产品页面与交互素材，统一存储在 `spovhe.cn` 的 `landing` 项目中。
 - 渠道归因：识别 `channel`、`cid`、`dc`、`utm_source`；原始渠道值进入落地页行为统计，未建档渠道下载回退自然流量。
-- 验收：独立 HTTPS 证书、H5 长图、PC 横版、骨架加载、Android APK、iOS 描述文件和下载配置均已验证。
+- 验收：独立 HTTPS 证书、H5 长图、PC 横版、骨架加载、Android APK、iOS 描述文件、独立 `ios-installation.html` 安装教程和下载配置均已验证。
 - 验收截图：`huangguo-live-mobile.png`、`huangguo-live-desktop.png`。
 
 ## 动漫落地页

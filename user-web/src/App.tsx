@@ -40,6 +40,7 @@ import MrHaose from "./pages/mrhaose-landing/page";
 import TangxinVlog from "./pages/tangxinvlog-landing/page";
 import Duanju91 from "./pages/91duanju-landing/page";
 import TangxinManju from "./pages/tangxinmanju-landing/page";
+import Huanghuo from "./pages/huanghuoduanju-landing/page";
 import StartupLoading from "./components/StartupLoading";
 
 function AnalyticsTracker() {
@@ -88,6 +89,7 @@ function App() {
   else if (product?.hostMode === "landing" && product.slug === "tangxinvlog") content = <TangxinVlog product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "91duanju") content = <Duanju91 product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "tangxinmanju") content = <TangxinManju product={product} />;
+  else if (product?.hostMode === "landing" && product.slug === "huanghuoduanju") content = <Huanghuo product={product} />;
   else if (product?.hostMode === "landing" && product.landingPage === null) content = <main aria-label="落地页待配置" className="min-h-screen bg-white" />;
   else if (product) content = (
     <I18nextProvider i18n={i18n}>

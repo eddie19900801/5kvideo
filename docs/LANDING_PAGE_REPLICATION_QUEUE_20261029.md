@@ -52,7 +52,7 @@
 | LP-015 | 已完成 | https://mmxz.gcpfvrehlh.vip/?_c=xmflxb | “杏吧”；复用后台产品 `杏吧|xingba` 并保留原分类；已发布至 `https://xingba.download.wflhc.cn/`，保留 `_c` 参数，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-016 | 已完成 | https://846a.khnbeh5gc.cc/aff-fFRGU | “妻友”；复用后台产品 `妻友|qiiyou` 并保留原分类；已发布至 `https://qiiyou.download.wflhc.cn/aff-fFRGU`，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-017 | 已完成 | https://3b737.0lmbi8ar.cc/chan/GS6735/m2UZB | “成人tiktok”；复用后台产品 `成人tiktok|chengrentiktok` 并保留原分类；已发布至 `https://chengrentiktok.download.wflhc.cn/chan/GS6735/m2UZB`，加密资源、APK、iOS 与移动页面验收通过 |
-| LP-018 | 待采集 | https://dshnlf0acb1n2.cloudfront.net/?dc=yjwxmgs07 | 保留 `dc` |
+| LP-018 | 已完成 | https://dshnlf0acb1n2.cloudfront.net/?dc=yjwxmgs07 | “成人快手”；复用后台产品 `成人快手|chengrenkuaishou` 并保留原分类；已发布至 `https://chengrenkuaishou.download.wflhc.cn/?dc=yjwxmgs07`，保留 `dc`，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-019 | 待采集 | https://28304.kqdlx2k14.cc/aff-eRqTD | 路径型渠道 |
 | LP-020 | 重复 | https://846a.khnbeh5gc.cc/aff-fFRGU | 与 LP-016 相同，保留原始记录但不重复开发 |
 | LP-021 | 待采集 | https://hfwmeish.cc/?cCode=c1deddfc6e9e5329cd0e9913c3b4be7c | 保留 `cCode` |

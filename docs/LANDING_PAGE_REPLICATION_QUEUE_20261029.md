@@ -60,6 +60,7 @@
 | LP-022 | 已完成 | https://d3r7pu6nh7q7vg.cloudfront.net/?dc=hrkzngss | “Xporn”；复用后台产品 `Xporn|xporn` 并保留原分类；从原站渠道 APK 提取 `res/mipmap-xxxhdpi/ic_launcher.png` 真实图标并加密入库；发布至 `https://xporn.download.wflhc.cn/?dc=hrkzngss`，页面、APK、iOS 与渠道参数验收通过 |
 | LP-023 | 已完成 | https://d3ikot94o90fwu.cloudfront.net/?dc=KYOHLIAW | “禁果短剧”；复用后台产品 `禁果短剧|jinguoduanju` 并保留原分类；从原站 APK 提取 `res/mipmap-xxhdpi/ic_launcher.webp` 真实图标并加密入库；发布至 `https://jinguoduanju.download.wflhc.cn/?dc=KYOHLIAW`，页面、APK、iOS 与渠道参数验收通过 |
 | LP-024 | 已完成 | https://d1pro9it16xrbj.cloudfront.net/?dc=GW6Al8GV | “MR好色”；复用后台产品 `MR好色|mrhaose` 并保留原分类；从原站 APK 提取 `res/mipmap-xxhdpi/ic_launcher.webp` 真实图标并加密入库；发布至 `https://mrhaose.download.wflhc.cn/?dc=GW6Al8GV`，页面、APK、iOS 与渠道参数验收通过 |
+| LP-025 | 已完成 | https://coffee.5zzx6ko.com/?_c=xpfk115tx | “糖心VLOG”；复用后台产品 `溏心Vlog|tangxinvlog` 并保留原分类；从原站 APK 提取 `res/9w.png` 真实图标并加密入库；发布至 `https://tangxinvlog.download.wflhc.cn/?_c=xpfk115tx`，保留来源渠道参数用于归因 |
 | LP-025 | 待采集 | https://coffee.5zzx6ko.com/?_c=xpfk115tx | 保留 `_c` |
 | LP-026 | 待采集 | https://daw3xqm04zuns.cloudfront.net/?dc=CZZ29825 | 保留 `dc` |
 | LP-027 | 待采集 | https://cxkmwj.g45mzx0.com/xgys-npjnwydi | 路径型渠道 |

@@ -40,11 +40,11 @@
 | LP-003 | 已完成 | https://img-cache-072137.3zm8j.com/?channel=EU5bkG | 已发布至 `haijiao.download.wflhc.cn`，保留 `channel` |
 | LP-004 | 已完成 | https://ew.eqznkgthhehfoahrgkupnelojn.com/fhs2/28456/lS53gK | 已发布至 `modelmedia.download.wflhc.cn`，路径末段映射渠道 |
 | LP-005 | 已完成 | https://m-res-418478.35n7s.com/?channel=tWFqC2 | 已发布至 `yinmu91.download.wflhc.cn`，保留 `channel` |
-| LP-006 | 待采集 | https://a52.upcissxzgwmvsswhqyttwchdls.com/hz8kq/57334/9fb9Q8 | 路径型渠道 |
+| LP-006 | 重复（已处理） | https://a52.upcissxzgwmvsswhqyttwchdls.com/hz8kq/57334/9fb9Q8 | 识别为“黄果短剧”；同产品已在 LP-002 完成复刻、部署与验收，本条不重复覆盖 |
 | LP-007 | 已完成 | https://edge-ws-94303.8l0bi.com/?channel=LmS5KR | 萝莉岛，已发布至 `lolidao.download.wflhc.cn`；真实图标从原 APK 提取并写入 APK/iOS 包 |
 | LP-008 | 已完成 | https://9x.azcumgmyqwfmgbuptfbnnadvrj.com/kz6dh/72080/wvcDNi | SM社区；复用后台同名产品 `smshequ`，不重复创建；已发布至 `smshequ.download.wflhc.cn` |
 | LP-009 | 已完成 | https://cvm.gkeqczlyrdddzapncquezrckwh.com/gkm3p/64698/gaKaBW | 暗黑抖阴；已发布至 `anheidouyin18.download.wflhc.cn`，APK 真实图标已提取 |
-| LP-010 | 重复 | https://atk.ysznhmxqhgdfrazokutafmrbpn.com/djkfe/8313/y1bVjL | 识别为“17岁”，后台已有完全同名产品 `17sui`，按规则跳过 |
+| LP-010 | 已完成 | https://atk.ysznhmxqhgdfrazokutafmrbpn.com/djkfe/8313/y1bVjL | “17岁”；复用后台产品 `17岁|17sui` 并保留原分类；已发布至 `https://17sui.download.wflhc.cn/`，RC4 源资源已解包并加密入库，APK、iOS 与移动页面验收通过 |
 | LP-011 | 已完成 | https://d3s1kk3g0b9wiu.cloudfront.net/?dc=yjwxmgs | “逼哩逼哩”，已发布至 `https://bilio3.download.wflhc.cn/`；保留 `dc` 渠道参数；源 APK 已失效（404），图标采用其官方站点 favicon 并加密入库；APK/iOS 与页面均验收通过 |
 | LP-012 | 已完成 | https://8fde.ln9llwwv.cc/chan-6159/aff-nd7Wx | “91短视频”；复用后台产品 `91短视频|91duanship`，保留原分类；已发布至 `https://91duanship.download.wflhc.cn/`，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-013 | 已完成 | https://fsadsf3g43g.pxz5y9.com/dy-tdy1506 | “抖阴”；复用后台产品 `抖阴|douyin`，保留原分类；已发布至 `https://douyin.download.wflhc.cn/`，加密资源、APK、iOS 与移动页面验收通过 |

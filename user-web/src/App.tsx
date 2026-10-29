@@ -21,6 +21,7 @@ import HaijiaoIosStore from "./pages/haijiao-landing/ios-store";
 import ModelMedia from "./pages/modelmedia-landing/page";
 import Yinmu from "./pages/yinmu-landing/page";
 import Lolita from "./pages/lolita-landing/page";
+import SmCommunity from "./pages/smcommunity-landing/page";
 import StartupLoading from "./components/StartupLoading";
 
 function AnalyticsTracker() {
@@ -50,6 +51,7 @@ function App() {
   else if (product?.hostMode === "landing" && product.slug === "modelmedia") content = <ModelMedia product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "yinmu91") content = <Yinmu product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "lolidao") content = <Lolita product={product} />;
+  else if (product?.hostMode === "landing" && (product.slug === "smshequ" || product.slug === "smcommunity")) content = <SmCommunity product={product} />;
   else if (product?.hostMode === "landing" && product.landingPage === null) content = <main aria-label="落地页待配置" className="min-h-screen bg-white" />;
   else if (product) content = (
     <I18nextProvider i18n={i18n}>

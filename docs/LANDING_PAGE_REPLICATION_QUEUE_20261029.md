@@ -42,7 +42,7 @@
 | LP-005 | 已完成 | https://m-res-418478.35n7s.com/?channel=tWFqC2 | 已发布至 `yinmu91.download.wflhc.cn`，保留 `channel` |
 | LP-006 | 待采集 | https://a52.upcissxzgwmvsswhqyttwchdls.com/hz8kq/57334/9fb9Q8 | 路径型渠道 |
 | LP-007 | 已完成 | https://edge-ws-94303.8l0bi.com/?channel=LmS5KR | 萝莉岛，已发布至 `lolidao.download.wflhc.cn`；真实图标从原 APK 提取并写入 APK/iOS 包 |
-| LP-008 | 待采集 | https://9x.azcumgmyqwfmgbuptfbnnadvrj.com/kz6dh/72080/wvcDNi | 路径型渠道 |
+| LP-008 | 已完成 | https://9x.azcumgmyqwfmgbuptfbnnadvrj.com/kz6dh/72080/wvcDNi | SM社区；复用后台同名产品 `smshequ`，不重复创建；已发布至 `smshequ.download.wflhc.cn` |
 | LP-009 | 待采集 | https://cvm.gkeqczlyrdddzapncquezrckwh.com/gkm3p/64698/gaKaBW | 路径型渠道 |
 | LP-010 | 待采集 | https://atk.ysznhmxqhgdfrazokutafmrbpn.com/djkfe/8313/y1bVjL | 路径型渠道 |
 | LP-011 | 待采集 | https://d3s1kk3g0b9wiu.cloudfront.net/?dc=yjwxmgs | 保留 `dc` |

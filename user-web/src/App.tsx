@@ -29,6 +29,7 @@ import DouyinLanding from "./pages/douyin-landing/page";
 import Seventeen from "./pages/seventeen-landing/page";
 import Pzhan from "./pages/pzhan-landing/page";
 import Xingba from "./pages/xingba-landing/page";
+import Qiiyou from "./pages/qiiyou-landing/page";
 import StartupLoading from "./components/StartupLoading";
 
 function AnalyticsTracker() {
@@ -66,6 +67,7 @@ function App() {
   else if (product?.hostMode === "landing" && product.slug === "17sui") content = <Seventeen product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "pzhan") content = <Pzhan product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "xingba") content = <Xingba product={product} />;
+  else if (product?.hostMode === "landing" && product.slug === "qiiyou") content = <Qiiyou product={product} />;
   else if (product?.hostMode === "landing" && product.landingPage === null) content = <main aria-label="落地页待配置" className="min-h-screen bg-white" />;
   else if (product) content = (
     <I18nextProvider i18n={i18n}>

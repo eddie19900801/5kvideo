@@ -58,7 +58,7 @@
 | LP-020 | 重复 | https://846a.khnbeh5gc.cc/aff-fFRGU | 与 LP-016 相同，保留原始记录但不重复开发 |
 | LP-021 | 已完成 | https://hfwmeish.cc/?cCode=c1deddfc6e9e5329cd0e9913c3b4be7c | “橙涩”；复用后台产品 `橙涩|chengse` 并保留原分类；发布至 `https://chengse.download.wflhc.cn/`，保留调用方传入的渠道参数并用于归因，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-022 | 已完成 | https://d3r7pu6nh7q7vg.cloudfront.net/?dc=hrkzngss | “Xporn”；复用后台产品 `Xporn|xporn` 并保留原分类；从原站渠道 APK 提取 `res/mipmap-xxxhdpi/ic_launcher.png` 真实图标并加密入库；发布至 `https://xporn.download.wflhc.cn/?dc=hrkzngss`，页面、APK、iOS 与渠道参数验收通过 |
-| LP-023 | 待采集 | https://d3ikot94o90fwu.cloudfront.net/?dc=KYOHLIAW | 保留 `dc` |
+| LP-023 | 已完成 | https://d3ikot94o90fwu.cloudfront.net/?dc=KYOHLIAW | “禁果短剧”；复用后台产品 `禁果短剧|jinguoduanju` 并保留原分类；从原站 APK 提取 `res/mipmap-xxhdpi/ic_launcher.webp` 真实图标并加密入库；发布至 `https://jinguoduanju.download.wflhc.cn/?dc=KYOHLIAW`，页面、APK、iOS 与渠道参数验收通过 |
 | LP-024 | 待采集 | https://d1pro9it16xrbj.cloudfront.net/?dc=GW6Al8GV | 保留 `dc` |
 | LP-025 | 待采集 | https://coffee.5zzx6ko.com/?_c=xpfk115tx | 保留 `_c` |
 | LP-026 | 待采集 | https://daw3xqm04zuns.cloudfront.net/?dc=CZZ29825 | 保留 `dc` |

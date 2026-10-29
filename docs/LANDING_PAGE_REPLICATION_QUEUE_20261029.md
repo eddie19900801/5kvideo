@@ -39,7 +39,7 @@
 | LP-002 | 已完成 | https://static-wh-580709.s8r1g.com/?channel=O7yLNH | 已发布至 `huangguo.download.wflhc.cn`，保留 `channel` |
 | LP-003 | 已完成 | https://img-cache-072137.3zm8j.com/?channel=EU5bkG | 已发布至 `haijiao.download.wflhc.cn`，保留 `channel` |
 | LP-004 | 已完成 | https://ew.eqznkgthhehfoahrgkupnelojn.com/fhs2/28456/lS53gK | 已发布至 `modelmedia.download.wflhc.cn`，路径末段映射渠道 |
-| LP-005 | 待采集 | https://m-res-418478.35n7s.com/?channel=tWFqC2 | 保留 `channel` |
+| LP-005 | 已完成 | https://m-res-418478.35n7s.com/?channel=tWFqC2 | 已发布至 `yinmu91.download.wflhc.cn`，保留 `channel` |
 | LP-006 | 待采集 | https://a52.upcissxzgwmvsswhqyttwchdls.com/hz8kq/57334/9fb9Q8 | 路径型渠道 |
 | LP-007 | 待采集 | https://xd.obszovyfhmeitnfgosizuyopdj.com/bv2qh/465/LmS5KR | 路径型渠道 |
 | LP-008 | 待采集 | https://9x.azcumgmyqwfmgbuptfbnnadvrj.com/kz6dh/72080/wvcDNi | 路径型渠道 |
@@ -181,8 +181,8 @@
 
 - 原始记录：74 条。
 - 完全重复：1 条（LP-020 与 LP-016）。
-- 已完成：4 个。
-- 独立待复刻页面：69 个。
+- 已完成：5 个。
+- 独立待复刻页面：68 个。
 - 常规独立页面：62 个。
 - 动漫页面：11 个。
 

@@ -14,6 +14,7 @@
 6. 素材转存到 `spovhe.cn`，以 AES-GCM 加密资源发布。
 7. 独立创建产品线、产品标识、运行配置、APP 域名和落地页域名。
 8. 保留传入的 `channel`、`dc`、`aff`、`chan`、`code`、`cCode`、`_c`、`ch` 等来源参数并用于渠道归因；没有渠道参数时使用自然流量 `direct`。
+9. 产品图标必须优先下载原站 APK，并通过 `aapt dump badging` 定位后解压真实应用图标；仅当原 APK 确认无法下载或不含可用图标时，才允许使用落地页 Logo，并在该条记录中注明原因。
 9. 生成自然渠道及后台已有渠道的落地页、APK、iOS 描述文件和下载地址。
 10. 接入落地页访问、按钮点击、下载、安装激活和启动统计。
 11. 分别验证 390×844、430×932、1366×768、1920×1080。
@@ -53,7 +54,7 @@
 | LP-016 | 已完成 | https://846a.khnbeh5gc.cc/aff-fFRGU | “妻友”；复用后台产品 `妻友|qiiyou` 并保留原分类；已发布至 `https://qiiyou.download.wflhc.cn/aff-fFRGU`，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-017 | 已完成 | https://3b737.0lmbi8ar.cc/chan/GS6735/m2UZB | “成人tiktok”；复用后台产品 `成人tiktok|chengrentiktok` 并保留原分类；已发布至 `https://chengrentiktok.download.wflhc.cn/chan/GS6735/m2UZB`，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-018 | 已完成 | https://dshnlf0acb1n2.cloudfront.net/?dc=yjwxmgs07 | “成人快手”；复用后台产品 `成人快手|chengrenkuaishou` 并保留原分类；已发布至 `https://chengrenkuaishou.download.wflhc.cn/?dc=yjwxmgs07`，保留 `dc`，加密资源、APK、iOS 与移动页面验收通过 |
-| LP-019 | 已完成 | https://28304.kqdlx2k14.cc/aff-eRqTD | “暗网禁区”；复用后台产品 `暗网禁区|anwangjinqu` 并保留原分类；已发布至 `https://anwangjinqu.download.wflhc.cn/aff-eRqTD`，加密资源、APK、iOS 与移动页面验收通过 |
+| LP-019 | 已完成 | https://28304.kqdlx2k14.cc/aff-eRqTD | “暗网禁区”；复用后台产品 `暗网禁区|anwangjinqu` 并保留原分类；已从原站 APK `res/9w.png` 提取真实图标并加密入库、替换后台和重打渠道包；落地页、APK、iOS 与移动页面验收通过 |
 | LP-020 | 重复 | https://846a.khnbeh5gc.cc/aff-fFRGU | 与 LP-016 相同，保留原始记录但不重复开发 |
 | LP-021 | 已完成 | https://hfwmeish.cc/?cCode=c1deddfc6e9e5329cd0e9913c3b4be7c | “橙涩”；复用后台产品 `橙涩|chengse` 并保留原分类；发布至 `https://chengse.download.wflhc.cn/`，保留调用方传入的渠道参数并用于归因，加密资源、APK、iOS 与移动页面验收通过 |
 | LP-022 | 待采集 | https://d3r7pu6nh7q7vg.cloudfront.net/?dc=hrkzngss | 保留 `dc` |

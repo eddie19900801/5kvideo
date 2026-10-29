@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.PPFree" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item><item name="android:colorAccent">#e94f4f</item>
+        <item name="android:navigationBarColor">#0B0D16</item><item name="android:statusBarColor">#0B0D16</item>
+        <item name="android:windowLightStatusBar">false</item><item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
+</resources>

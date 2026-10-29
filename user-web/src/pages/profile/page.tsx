@@ -1,481 +1,180 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { useVideo } from '@/contexts/VideoContext';
-import BottomNav from '@/components/base/BottomNav';
-import { useMode } from '@/contexts/ModeContext';
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { library, type HistoryItem, type FavoriteItem, type FavoriteGroup } from "@/services/library";
+import FavoriteGroups from "@/components/FavoriteGroups";
+import HiddenVideos from "@/components/HiddenVideos";
 
-function formatWatchTime(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0 && m > 0) return `${h}小时${m}分钟`;
-  if (h > 0) return `${h}小时`;
-  if (m > 0) return `${m}分钟`;
-  return '0分钟';
-}
+const time = (value: number) =>
+  `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, "0")}`;
 
 export default function Profile() {
-  const navigate = useNavigate();
-  const { user, isGuest, login, bindAccount, logout, updatePassword, updateProfile } = useAuth();
-  const { favorites, watchHistory, videos } = useVideo();
-  const { mode } = useMode();
-
-  const visibleVideoIds = useMemo(
-    () => new Set(videos.filter((video) => mode === '18+' || !video.isAdult).map((video) => video.id)),
-    [videos, mode],
-  );
-  const visibleFavorites = favorites.filter((id) => visibleVideoIds.has(id));
-  const visibleHistory = watchHistory.filter((record) => visibleVideoIds.has(record.videoId));
-  const totalWatchTime = visibleHistory.reduce((sum, r) => sum + r.progress, 0);
-
-  // --- Bind account modal ---
-  const [showBindModal, setShowBindModal] = useState(false);
-  const [bindAccount2, setBindAccountVal] = useState('');
-  const [bindPassword, setBindPassword] = useState('');
-  const [bindConfirm, setBindConfirm] = useState('');
-  const [bindError, setBindError] = useState('');
-  const [bindSuccess, setBindSuccess] = useState('');
-
-  const handleBind = async () => {
-    setBindError('');
-    setBindSuccess('');
-
-    if (!bindAccount2.trim()) {
-      setBindError('请输入账号');
-      return;
-    }
-    if (bindAccount2.trim().length < 3) {
-      setBindError('账号至少3个字符');
-      return;
-    }
-    if (!bindPassword) {
-      setBindError('请输入密码');
-      return;
-    }
-    if (bindPassword.length < 6) {
-      setBindError('密码至少6位');
-      return;
-    }
-    if (bindPassword !== bindConfirm) {
-      setBindError('两次输入的密码不一致');
-      return;
-    }
-
-    const result = await bindAccount(bindAccount2.trim(), bindPassword);
-    if (result.success) {
-      setBindSuccess(result.message);
-      setTimeout(() => {
-        setShowBindModal(false);
-        setBindAccountVal('');
-        setBindPassword('');
-        setBindConfirm('');
-        setBindError('');
-        setBindSuccess('');
-      }, 1500);
-    } else {
-      setBindError(result.message);
-    }
+  const navigate = useNavigate(),
+    [tab, setTab] = useState<"history" | "favorites">("history"),
+    [history, setHistory] = useState<HistoryItem[]>([]),
+    [favorites, setFavorites] = useState<FavoriteItem[]>([]),
+    [query, setQuery] = useState(""),
+    [historyFilter, setHistoryFilter] = useState("all"),
+    [groups, setGroups] = useState<FavoriteGroup[]>(library.groups()),
+    [activeGroup, setActiveGroup] = useState("all"),
+    [selected, setSelected] = useState<string[]>([]),
+    [groupError, setGroupError] = useState("");
+  const refresh = () => {
+    setHistory(library.history());
+    const saved = library.favorites(), savedGroups = library.groups();
+    setFavorites(saved); setGroups(savedGroups);
+    setSelected(ids => ids.filter(id => saved.some(item => item.id === id)));
+    setActiveGroup(id => id === "all" || id === "ungrouped" || savedGroups.some(group => group.id === id) ? id : "ungrouped");
   };
-
-  // --- Password change modal ---
-  const [showPwdModal, setShowPwdModal] = useState(false);
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [pwdMsg, setPwdMsg] = useState('');
-  const [pwdMsgType, setPwdMsgType] = useState<'success' | 'error'>('error');
-
-  const handleUpdatePassword = async () => {
-    if (!oldPassword || !newPassword) {
-      setPwdMsg('请填写所有字段');
-      setPwdMsgType('error');
-      return;
-    }
-    if (newPassword.length < 6) {
-      setPwdMsg('新密码至少6位');
-      setPwdMsgType('error');
-      return;
-    }
-    const result = await updatePassword(oldPassword, newPassword);
-    setPwdMsg(result.message);
-    setPwdMsgType(result.success ? 'success' : 'error');
-    if (result.success) {
-      setTimeout(() => {
-        setShowPwdModal(false);
-        setOldPassword('');
-        setNewPassword('');
-        setPwdMsg('');
-      }, 1500);
-    }
+  useEffect(() => {
+    refresh();
+    window.addEventListener(library.event, refresh);
+    window.addEventListener("storage", refresh);
+    return () => { window.removeEventListener(library.event, refresh); window.removeEventListener("storage", refresh); };
+  }, []);
+  useEffect(() => { setSelected([]); setGroupError(""); }, [tab, query, activeGroup]);
+  const move = (ids: string[], groupId: string) => {
+    try { library.assignGroup(ids, groupId); setSelected([]); setGroupError(""); }
+    catch (error) { setGroupError(error instanceof Error ? error.message : "移动失败"); }
   };
-
-  // --- Username edit ---
-  const [editingName, setEditingName] = useState(false);
-  const [nameInput, setNameInput] = useState('');
-
-  const startEditName = () => {
-    setNameInput(user?.username || '');
-    setEditingName(true);
-  };
-
-  const saveName = async () => {
-    const trimmed = nameInput.trim();
-    if (trimmed && trimmed !== user?.username) {
-      await updateProfile(trimmed);
-    }
-    setEditingName(false);
-  };
-
-  // --- Logout ---
-  const handleLogout = () => {
-    void logout();
-  };
-
-  // --- Login modal (for already-bound users switching devices) ---
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginAccount, setLoginAccount] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
-
-  const handleLogin = async () => {
-    setLoginError('');
-    if (!loginAccount.trim() || !loginPassword) {
-      setLoginError('请填写账号和密码');
-      return;
-    }
-    const result = await login(loginAccount.trim(), loginPassword);
-    if (result.success) {
-      setShowLoginModal(false);
-      setLoginAccount('');
-      setLoginPassword('');
-    } else {
-      setLoginError(result.message);
-    }
-  };
-
-  if (!user) return null;
-
+  const sourceItems = tab === "history" ? history : favorites;
+  const keyword = query.trim().toLocaleLowerCase();
+  const items = sourceItems.filter(item => {
+    if (tab === "favorites" && activeGroup !== "all" && ((item as FavoriteItem).groupId || "ungrouped") !== activeGroup) return false;
+    if (tab === "history" && historyFilter !== "all" && Boolean((item as HistoryItem).completed) !== (historyFilter === "completed")) return false;
+    return !keyword || `${item.title} ${item.category} ${item.tags.join(" ")}`.toLocaleLowerCase().includes(keyword);
+  });
   return (
-    <div className="min-h-screen bg-background-50 pb-20">
-      <header className="safe-top px-4 pt-3 pb-3">
-        <h1 className="font-heading text-xl font-bold text-foreground-50 tracking-tight">
-          我的
-        </h1>
+    <div className="mx-auto min-h-screen w-full max-w-[520px] bg-background-50">
+      <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-background-200 bg-background-50/95 px-3 py-2.5 backdrop-blur">
+        <button
+          onClick={() => navigate(-1)}
+          className="grid h-9 w-9 place-items-center rounded-full bg-background-100"
+        >
+          <i className="ri-arrow-left-line" />
+        </button>
+        <h1 className="flex-1 text-base font-bold">个人中心</h1>
       </header>
-
-      <main className="px-4">
-        {/* ---- User card ---- */}
-        <div className="flex items-center gap-4 py-5 border-b border-background-200">
-          <img
-            src={user.avatar}
-            alt={user.username}
-            className="w-16 h-16 rounded-full object-cover border-2 border-background-300 flex-shrink-0"
+      <section className="bg-gradient-to-br from-primary-500 to-primary-600 px-4 py-5 text-white">
+        <div className="flex items-center gap-3">
+          <span className="grid h-12 w-12 place-items-center rounded-full bg-white/20 text-2xl">
+            <i className="ri-user-3-line" />
+          </span>
+          <div>
+            <b className="block">本机用户</b>
+            <small className="opacity-70">收藏和历史仅保存在当前设备</small>
+          </div>
+        </div>
+      </section>
+      <div className="grid grid-cols-2 border-b border-background-200">
+        <button
+          onClick={() => setTab("history")}
+          className={`py-3 text-sm font-bold ${tab === "history" ? "border-b-2 border-primary-500 text-primary-600" : "text-foreground-500"}`}
+        >
+          播放历史 ({history.length})
+        </button>
+        <button
+          onClick={() => setTab("favorites")}
+          className={`py-3 text-sm font-bold ${tab === "favorites" ? "border-b-2 border-primary-500 text-primary-600" : "text-foreground-500"}`}
+        >
+          我的收藏 ({favorites.length})
+        </button>
+      </div>
+      <HiddenVideos />
+      <div className="space-y-2 px-3 pt-3">
+        {tab === "favorites" && <FavoriteGroups groups={groups} active={activeGroup} onChange={setActiveGroup} />}
+        <div className="flex gap-2"><input aria-label="搜索收藏或历史" value={query} onChange={event => setQuery(event.target.value)} placeholder={tab === "history" ? "搜索播放历史" : "搜索我的收藏"} className="min-w-0 flex-1 rounded-lg border border-background-300 bg-background-50 p-3 text-sm" />
+          {query && <button onClick={() => setQuery("")} className="px-3 text-sm text-primary-600">清除</button>}
+        </div>
+        {tab === "history" && <select aria-label="观看状态" value={historyFilter} onChange={event => setHistoryFilter(event.target.value)} className="rounded-lg border border-background-300 bg-background-50 p-2 text-sm"><option value="all">全部历史</option><option value="unfinished">未看完</option><option value="completed">已看完</option></select>}
+        <p role="status" className="text-xs text-foreground-400">显示 {items.length} / {sourceItems.length} 条</p>
+      </div>
+      {tab === "favorites" && items.length > 0 && <div className="flex flex-wrap items-center gap-2 px-3 py-2">
+        <button onClick={() => setSelected(items.map(item => item.id))} className="rounded-full bg-background-100 px-3 py-2 text-xs">选择当前结果</button>
+        {selected.length > 0 && <><span className="text-xs">已选 {selected.length} 条</span><select aria-label="批量移动收藏" value="" onChange={event => move(selected, event.target.value === "ungrouped" ? "" : event.target.value)} className="max-w-full rounded-lg border border-background-300 bg-background-50 p-2 text-xs"><option value="" disabled>移动到分组</option><option value="ungrouped">未分组</option>{groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}</select><button onClick={() => setSelected([])} className="p-2 text-xs">取消选择</button></>}
+      </div>}
+      {groupError && <p role="alert" className="px-3 text-xs text-red-500">{groupError}</p>}
+      <div className="flex justify-end px-3 py-2">
+        {sourceItems.length > 0 && (
+          <button
+            onClick={() => {
+              if (!window.confirm(`确定清空${tab === "history" ? "播放历史" : "全部收藏"}？此操作无法撤销。`)) return;
+              if (tab === "history") library.clearHistory(); else library.clearFavorites();
+            }}
+            className="text-xs text-foreground-400"
+          >
+            <i className="ri-delete-bin-line mr-1" />
+            清空全部{tab === "history" ? "历史" : "收藏"}
+          </button>
+        )}
+      </div>
+      {items.length ? (
+        <div className="space-y-2 px-3 pb-24">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="relative flex gap-3 overflow-hidden rounded-xl bg-background-100 p-2"
+            >
+              {tab === "favorites" && <input type="checkbox" aria-label={`选择收藏：${item.title}`} checked={selected.includes(item.id)} onChange={event => setSelected(value => event.target.checked ? [...value, item.id] : value.filter(id => id !== item.id))} className="h-5 w-5 flex-none self-center" />}
+              <Link
+                to={`/video/${item.id}`}
+                className="flex min-w-0 flex-1 gap-3"
+              >
+                <div className="relative w-20 flex-none overflow-hidden rounded-lg bg-black">
+                  <span className="absolute inset-0 grid place-items-center text-lg text-white/40" aria-hidden="true"><i className="ri-video-line" /></span>
+                  <img
+                    src={item.thumbnail}
+                    alt={item.title}
+                    loading="lazy"
+                    onError={event=>{event.currentTarget.hidden=true}}
+                    className="relative aspect-video h-full w-full object-cover"
+                  />
+                  <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 text-[9px] text-white">
+                    {tab === "history"
+                      ? ((item as HistoryItem).completed ? "已看完" : time((item as HistoryItem).progress))
+                      : "收藏"}
+                  </span>
+                </div>
+                <div className="min-w-0 py-1">
+                  <b className="line-clamp-2 text-sm leading-snug">
+                    {item.title}
+                  </b>
+                  <small className="mt-2 block text-foreground-400">
+                    {item.category === "网曝门" ? "吃瓜" : item.category}
+                  </small>
+                </div>
+              </Link>
+              <div className={`flex ${tab === "favorites" ? "w-20" : "w-8"} flex-none flex-col items-end gap-2`}>
+                {tab === "favorites" && <select aria-label={`收藏分组：${item.title}`} value={(item as FavoriteItem).groupId || ""} onChange={event => move([item.id], event.target.value)} className="w-full rounded border border-background-300 bg-background-50 p-1 text-xs"><option value="">未分组</option>{groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}</select>}
+              <button
+                onClick={() =>
+                  tab === "history"
+                    ? library.removeHistory(item.id)
+                    : library.toggleFavorite(item)
+                }
+                aria-label="删除"
+                className="grid h-8 w-8 flex-none place-items-center text-foreground-400"
+              >
+                <i className="ri-close-line" />
+              </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="py-24 text-center text-sm text-foreground-400">
+          <i
+            className={`${tab === "history" ? "ri-history-line" : "ri-heart-line"} mb-2 block text-3xl`}
           />
-          <div className="flex-1 min-w-0">
-            {editingName ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={nameInput}
-                  onChange={(e) => setNameInput(e.target.value)}
-                  maxLength={12}
-                  className="flex-1 bg-background-200 text-foreground-100 text-sm px-3 py-1.5 rounded-lg border border-background-300/50"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') saveName();
-                  }}
-                />
-                <button
-                  onClick={saveName}
-                  className="text-primary-400 text-sm font-medium whitespace-nowrap hover:text-primary-300 transition-colors"
-                >
-                  确定
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <h2 className="text-foreground-100 text-base font-semibold">{user.username}</h2>
-                <button
-                  onClick={startEditName}
-                  className="text-foreground-500 hover:text-foreground-300 transition-colors"
-                >
-                  <i className="ri-edit-line text-xs" />
-                </button>
-              </div>
-            )}
-            {isGuest ? (
-              <p className="text-foreground-500 text-xs mt-0.5">游客账号</p>
-            ) : (
-              <p className="text-foreground-500 text-xs mt-0.5">账号：{user.account}</p>
-            )}
-          </div>
-
-          {!isGuest && (
-            <button
-              onClick={() => setShowLoginModal(true)}
-              className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-background-200 text-foreground-400 text-xs font-medium hover:bg-background-300 transition-colors whitespace-nowrap"
-            >
-              切换账号
-            </button>
-          )}
-        </div>
-
-        {/* ---- Stats ---- */}
-        <div className="flex justify-around py-5 border-b border-background-200">
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-foreground-100 text-lg font-bold">{visibleFavorites.length}</span>
-            <span className="text-foreground-500 text-xs">收藏</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-foreground-100 text-lg font-bold">{visibleHistory.length}</span>
-            <span className="text-foreground-500 text-xs">观看记录</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-foreground-100 text-lg font-bold">{formatWatchTime(totalWatchTime)}</span>
-            <span className="text-foreground-500 text-xs">观看时长</span>
-          </div>
-        </div>
-
-        {/* ---- Menu ---- */}
-        <div className="mt-4 space-y-0.5">
-          <button
-            onClick={() => navigate('/favorites')}
-            className="w-full flex items-center justify-between px-4 py-3.5 bg-background-100 rounded-xl hover:bg-background-200 transition-colors"
+          <p>{sourceItems.length ? "没有符合条件的记录" : tab === "history" ? "暂无播放历史" : "暂无收藏视频"}</p>
+          {sourceItems.length > 0 && <button onClick={() => { setQuery(""); setHistoryFilter("all"); setActiveGroup("all"); }} className="mt-3 block w-full text-primary-600">清除筛选</button>}
+          <Link
+            to="/"
+            className="mt-4 inline-block rounded-full bg-primary-500 px-5 py-2 text-xs font-bold text-white"
           >
-            <div className="flex items-center gap-3">
-              <i className="ri-heart-line text-lg text-foreground-400" />
-              <span className="text-foreground-300 text-sm">我的收藏</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-foreground-500 text-xs">{visibleFavorites.length}</span>
-              <i className="ri-arrow-right-s-line text-foreground-600" />
-            </div>
-          </button>
-
-          <button
-            onClick={() => navigate('/history')}
-            className="w-full flex items-center justify-between px-4 py-3.5 bg-background-100 rounded-xl hover:bg-background-200 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <i className="ri-history-line text-lg text-foreground-400" />
-              <span className="text-foreground-300 text-sm">观看记录</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-foreground-500 text-xs">{visibleHistory.length}</span>
-              <i className="ri-arrow-right-s-line text-foreground-600" />
-            </div>
-          </button>
-
-          {isGuest ? (
-            <button
-              onClick={() => {
-                setShowBindModal(true);
-                setBindError('');
-                setBindSuccess('');
-                setBindAccountVal('');
-                setBindPassword('');
-                setBindConfirm('');
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-colors whitespace-nowrap bg-primary-500/10 hover:bg-primary-500/20"
-            >
-              <i className="ri-link text-lg text-primary-400" />
-              <span className="text-primary-400 text-sm font-medium">绑定账号</span>
-              <span className="text-foreground-500 text-xs ml-auto">设置密码后可跨设备登录</span>
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={() => {
-                  setShowPwdModal(true);
-                  setPwdMsg('');
-                  setOldPassword('');
-                  setNewPassword('');
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3.5 bg-background-100 rounded-xl hover:bg-background-200 transition-colors"
-              >
-                <i className="ri-lock-line text-lg text-foreground-400" />
-                <span className="text-foreground-300 text-sm">修改密码</span>
-              </button>
-            </>
-          )}
-        </div>
-
-        {!isGuest && (
-          <div className="mt-6">
-            <button
-              onClick={handleLogout}
-              className="w-full py-3 bg-background-200 text-foreground-400 rounded-xl text-sm font-medium hover:bg-background-300 transition-colors whitespace-nowrap"
-            >
-              退出登录
-            </button>
-            <p className="text-foreground-600 text-xs text-center mt-3">
-              退出后将创建新的游客账号，收藏和记录保留在本地
-            </p>
-          </div>
-        )}
-
-        {isGuest && (
-          <div className="mt-6">
-            <p className="text-foreground-600 text-xs text-center">
-              绑定账号后可使用已有账号登录，数据保留在本地
-            </p>
-          </div>
-        )}
-      </main>
-
-      {/* ---- Bind account modal ---- */}
-      {showBindModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6 animate-fade-in">
-          <div className="w-full max-w-[320px] bg-background-200 rounded-2xl p-5">
-            <h3 className="text-foreground-100 text-base font-semibold mb-1">绑定账号</h3>
-            <p className="text-foreground-500 text-xs mb-4">设置账号密码后可在其他设备登录</p>
-
-            <input
-              type="text"
-              value={bindAccount2}
-              onChange={(e) => setBindAccountVal(e.target.value)}
-              placeholder="设置账号（至少3个字符）"
-              className="w-full bg-background-100 text-foreground-100 text-sm px-4 py-2.5 rounded-xl border border-background-300/50 mb-3 placeholder:text-foreground-500"
-            />
-            <input
-              type="password"
-              value={bindPassword}
-              onChange={(e) => setBindPassword(e.target.value)}
-              placeholder="设置密码（至少6位）"
-              className="w-full bg-background-100 text-foreground-100 text-sm px-4 py-2.5 rounded-xl border border-background-300/50 mb-3 placeholder:text-foreground-500"
-            />
-            <input
-              type="password"
-              value={bindConfirm}
-              onChange={(e) => setBindConfirm(e.target.value)}
-              placeholder="确认密码"
-              className="w-full bg-background-100 text-foreground-100 text-sm px-4 py-2.5 rounded-xl border border-background-300/50 mb-3 placeholder:text-foreground-500"
-            />
-
-            {bindError && (
-              <p className="text-red-400 text-xs bg-red-400/10 px-3 py-2 rounded-lg mb-3">{bindError}</p>
-            )}
-            {bindSuccess && (
-              <p className="text-primary-400 text-xs bg-primary-400/10 px-3 py-2 rounded-lg mb-3">{bindSuccess}</p>
-            )}
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowBindModal(false)}
-                className="flex-1 py-2.5 bg-background-300 text-foreground-400 rounded-xl text-sm font-medium hover:bg-background-400 transition-colors whitespace-nowrap"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleBind}
-                className="flex-1 py-2.5 bg-primary-500 text-background-50 rounded-xl text-sm font-medium hover:bg-primary-600 transition-colors whitespace-nowrap"
-              >
-                确认绑定
-              </button>
-            </div>
-          </div>
+            去看视频
+          </Link>
         </div>
       )}
-
-      {/* ---- Password change modal ---- */}
-      {showPwdModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6 animate-fade-in">
-          <div className="w-full max-w-[320px] bg-background-200 rounded-2xl p-5">
-            <h3 className="text-foreground-100 text-base font-semibold mb-4">修改密码</h3>
-
-            <input
-              type="password"
-              value={oldPassword}
-              onChange={(e) => setOldPassword(e.target.value)}
-              placeholder="原密码"
-              className="w-full bg-background-100 text-foreground-100 text-sm px-4 py-2.5 rounded-xl border border-background-300/50 mb-3 placeholder:text-foreground-500"
-            />
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="新密码（至少6位）"
-              className="w-full bg-background-100 text-foreground-100 text-sm px-4 py-2.5 rounded-xl border border-background-300/50 mb-3 placeholder:text-foreground-500"
-            />
-
-            {pwdMsg && (
-              <p
-                className={`text-xs mb-3 ${
-                  pwdMsgType === 'success' ? 'text-primary-400' : 'text-red-400'
-                }`}
-              >
-                {pwdMsg}
-              </p>
-            )}
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowPwdModal(false)}
-                className="flex-1 py-2.5 bg-background-300 text-foreground-400 rounded-xl text-sm font-medium hover:bg-background-400 transition-colors whitespace-nowrap"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleUpdatePassword}
-                className="flex-1 py-2.5 bg-primary-500 text-background-50 rounded-xl text-sm font-medium hover:bg-primary-600 transition-colors whitespace-nowrap"
-              >
-                确认修改
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ---- Login modal (switch account) ---- */}
-      {showLoginModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6 animate-fade-in">
-          <div className="w-full max-w-[320px] bg-background-200 rounded-2xl p-5">
-            <h3 className="text-foreground-100 text-base font-semibold mb-1">切换账号</h3>
-            <p className="text-foreground-500 text-xs mb-4">使用已绑定的账号登录</p>
-
-            <input
-              type="text"
-              value={loginAccount}
-              onChange={(e) => setLoginAccount(e.target.value)}
-              placeholder="账号"
-              className="w-full bg-background-100 text-foreground-100 text-sm px-4 py-2.5 rounded-xl border border-background-300/50 mb-3 placeholder:text-foreground-500"
-            />
-            <input
-              type="password"
-              value={loginPassword}
-              onChange={(e) => setLoginPassword(e.target.value)}
-              placeholder="密码"
-              className="w-full bg-background-100 text-foreground-100 text-sm px-4 py-2.5 rounded-xl border border-background-300/50 mb-3 placeholder:text-foreground-500"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleLogin();
-              }}
-            />
-
-            {loginError && (
-              <p className="text-red-400 text-xs bg-red-400/10 px-3 py-2 rounded-lg mb-3">{loginError}</p>
-            )}
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowLoginModal(false);
-                  setLoginError('');
-                }}
-                className="flex-1 py-2.5 bg-background-300 text-foreground-400 rounded-xl text-sm font-medium hover:bg-background-400 transition-colors whitespace-nowrap"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleLogin}
-                className="flex-1 py-2.5 bg-primary-500 text-background-50 rounded-xl text-sm font-medium hover:bg-primary-600 transition-colors whitespace-nowrap"
-              >
-                登录
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <BottomNav />
     </div>
   );
 }

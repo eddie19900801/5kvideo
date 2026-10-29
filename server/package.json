@@ -11,6 +11,8 @@
     "start:media-worker": "node dist/mediaWorker.js",
     "db:migrate": "npm run build && node dist/postgres/migrate.js",
     "db:import-json": "npm run build && node dist/postgres/importJson.js",
+    "db:import-runtime": "npm run build && node dist/postgres/importRuntime.js",
+    "db:audit-runtime": "npm run build && node dist/postgres/auditRuntime.js",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

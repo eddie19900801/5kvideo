@@ -24,6 +24,12 @@ import { optionalAuthenticate } from "./auth.js";
 import { playbackAccess } from "./middleware/playbackAccess.js";
 import { startCollectorCatalogScheduler } from "./services/collectorCatalogSync.js";
 import { collectedVideosRouter } from "./routes/collectedVideos.js";
+import { channelsRouter } from "./routes/channels.js";
+import { productLinesRouter } from "./routes/productLines.js";
+import { initializeDatabase, readDb } from "./db.js";
+import { syncAllProductPackageManifests } from "./services/productPackages.js";
+import { resumeProductDeployments } from "./services/productDeployment.js";
+import { apiDocsHtml, openApiJson } from "./openapi.js";
 
 export const app = express();
 const { port, mediaDir, chunkDir } = config;
@@ -54,6 +60,8 @@ app.use(
 app.get("/health", (_, res) =>
   ok(res, { status: "ok", time: new Date().toISOString() }),
 );
+app.get("/api/v1/openapi.json", openApiJson);
+app.get("/api/docs", apiDocsHtml);
 app.use("/api/v1", optionalAuthenticate, playbackAccess);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/me", meRouter);
@@ -67,11 +75,16 @@ app.use("/api/v1/admin", adminUploadsRouter);
 app.use("/api/v1/admin", adminMediaJobsRouter);
 app.use("/api/v1/admin", adminCollectorsRouter);
 app.use("/api/v1", analyticsRouter);
+app.use("/api/v1", channelsRouter);
+app.use("/api/v1", productLinesRouter);
 app.use("/api/v1", publicMetadataRouter);
 app.use((_, res) =>
   res.status(404).json({ error: { code: "NOT_FOUND", message: "接口不存在" } }),
 );
-export function startServer(listenPort = port) {
+export async function startServer(listenPort = port) {
+  await initializeDatabase();
+  syncAllProductPackageManifests(readDb());
+  resumeProductDeployments();
   startCollectorCatalogScheduler();
   return app.listen(listenPort, () =>
     console.log(`5K Video API listening on http://localhost:${listenPort}`),
@@ -79,4 +92,4 @@ export function startServer(listenPort = port) {
 }
 
 const entryFile = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : "";
-if (entryFile === import.meta.url) startServer();
+if (entryFile === import.meta.url) void startServer();

@@ -69,7 +69,7 @@ export function videoForRequest(req: AuthRequest, video: Video): Video {
     ...video,
     duration: normalizeSeconds(trimmed ? video.duration - 60 : video.duration),
     trimStart: trimmed ? 30 : 0,
-    trimEnd: trimmed ? 30 : 0,
+    trimEnd: 0,
     highlights: video.highlights?.map(item=>({...item,image:`${requestApiBase(req)}/videos/${video.id}/highlights/${item.id}/image.enc`})),
     thumbnail: encryptedR2ObjectKey(video.thumbnail)
       ? `${requestApiBase(req)}/videos/${video.id}/cover.enc?v=${createHmac('sha256', config.playbackSecret).update(video.thumbnail).digest('hex').slice(0, 12)}`

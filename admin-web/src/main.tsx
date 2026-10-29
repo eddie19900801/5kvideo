@@ -40,6 +40,10 @@ const highlightCount = (duration: number) =>
 const CoverEditor = React.lazy(() => import("./CoverEditor"));
 const Analytics = React.lazy(() => import("./Analytics"));
 const CollectorManager = React.lazy(() => import("./CollectorManager"));
+const ChannelManager = React.lazy(() => import("./ChannelManager"));
+const CollectorSources = React.lazy(() => import("./CollectorSources"));
+const ProductLineManager = React.lazy(() => import("./ProductLineManager"));
+const LandingAnalytics = React.lazy(() => import("./LandingAnalytics"));
 type Video = {
   id: string;
   title: string;
@@ -505,9 +509,13 @@ function App() {
               icon: <CloudDownloadOutlined />,
               label: "采集视频管理",
             },
+            { key: "collector-sources", label: "片源配置" },
             { key: "tags", label: "标签管理" },
             { key: "categories", label: "视频分类" },
             { key: "users", label: "用户管理" },
+            { key: "product-lines", label: "产品线管理" },
+            { key: "channels", label: "渠道管理" },
+            { key: "landing-analytics", icon: <DashboardOutlined />, label: "落地页分析" },
             {
               key: "analytics",
               icon: <DashboardOutlined />,
@@ -555,6 +563,22 @@ function App() {
           ) : active === "collectors" ? (
             <React.Suspense fallback={<Card loading />}>
               <CollectorManager onImported={() => void load()} />
+            </React.Suspense>
+          ) : active === "collector-sources" ? (
+            <React.Suspense fallback={<Card loading />}>
+              <CollectorSources />
+            </React.Suspense>
+          ) : active === "channels" ? (
+            <React.Suspense fallback={<Card loading />}>
+              <ChannelManager />
+            </React.Suspense>
+          ) : active === "product-lines" ? (
+            <React.Suspense fallback={<Card loading />}>
+              <ProductLineManager />
+            </React.Suspense>
+          ) : active === "landing-analytics" ? (
+            <React.Suspense fallback={<Card loading />}>
+              <LandingAnalytics />
             </React.Suspense>
           ) : active === "users" ? (
             <Card title="用户管理">

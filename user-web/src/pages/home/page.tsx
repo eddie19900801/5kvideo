@@ -1,527 +1,284 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import type { MockVideo } from '@/mocks/videos';
-import VideoCard from '@/components/base/VideoCard';
-import TagCapsule from '@/components/base/TagCapsule';
-import BottomNav from '@/components/base/BottomNav';
-import PinModal from '@/components/feature/PinModal';
-import { useMode } from '@/contexts/ModeContext';
-import { useVideo } from '@/contexts/VideoContext';
-import { request } from '@/services/api';
-
-const countryTags = ['国产', '日韩', '欧美'];
-
-interface Suggestion {
-  type: 'tag' | 'title';
-  text: string;
-  display: string;
-}
-
+import { topicInterests } from "@/services/topicInterests";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import CategoryTabs from "./components/CategoryTabs";
+import Waterfall from "./components/Waterfall";
+import SearchPanel from "./components/SearchPanel";
+import VideoSkeleton from "./components/VideoSkeleton";
+import PageSkeleton from "./components/PageSkeleton";
+import NavigationBanner from "./components/NavigationBanner";
+import FiveKAdSlot from "@/components/FiveKAdSlot";
+import ContinueWatching from "@/components/ContinueWatching";
+import EncryptedAssetImage, { productIconSource } from "@/components/EncryptedAssetImage";
+import { videoApi } from "@/services/api";
+import { analytics } from "@/services/analytics";
+import { feedCache } from "@/services/feedCache";
+import { performanceMonitor } from "@/services/performance";
+import type { Category } from "@/types";
+import { usePagedVideos } from "@/hooks/usePagedVideos";
+import { productRuntime, type ProductRuntime } from "@/services/productRuntime";
+const HOME_POPUP_ZONE = "ZN_9A10DE603D56C91A63A196EF";
+const feedSessionKeys = {
+  sort: "5knews_feed_sort",
+  duration: "5knews_feed_duration",
+  category: "5knews_feed_category",
+  keyword: "5knews_feed_keyword",
+  batchPage: "5knews_feed_batch_page",
+  seed: "5knews_feed_seed",
+};
+const readSession = (key: string) => {
+  try {
+    return sessionStorage.getItem(key) || "";
+  } catch {
+    return "";
+  }
+};
+const readUrlKeyword = () => {
+  const params = new URLSearchParams(window.location.search);
+  return (params.get("q") || params.get("keyword") || params.get("search") || "").trim();
+};
+const readUrlCategory = () =>
+  new URLSearchParams(window.location.search).get("category")?.trim() || "";
+const recommendationSeed = () => {
+  const saved = readSession(feedSessionKeys.seed);
+  if (saved) return saved;
+  const value = `${Date.now()}-${crypto.randomUUID()}`;
+  try {
+    sessionStorage.setItem(feedSessionKeys.seed, value);
+  } catch { /* Storage may be unavailable in private browsing. */ }
+  return value;
+};
 export default function Home() {
-  const { videos } = useVideo();
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [selectedTags, setSelectedTags] = useState<string[]>(() => {
-    const tagParam = searchParams.get('tag');
-    return tagParam ? [tagParam] : [];
-  });
-  const [searchQuery, setSearchQuery] = useState('');
-  const [catalogTags, setCatalogTags] = useState<{name:string;usageCount:number}[]>([]);
-  const [tagUsage, setTagUsage] = useState<Record<string,number>>(()=>{try{return JSON.parse(localStorage.getItem('video_tag_usage')||'{}')}catch{return {}}});
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [tagsExpanded, setTagsExpanded] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(12);
-  const [loading, setLoading] = useState(false);
-  const loaderRef = useRef<HTMLDivElement>(null);
-  const waterfallRef = useRef<HTMLDivElement>(null);
-  const tagScrollRef = useRef<HTMLDivElement>(null);
-  const [tagScroll, setTagScroll] = useState({ top: 0, height: 20 });
-  const [focusedVideoId, setFocusedVideoId] = useState<string | null>(null);
-
-  const { mode, pinSet, setPin, switchToNormal, switchTo18Plus, verifyPin } = useMode();
-  const [pinModalOpen, setPinModalOpen] = useState(false);
-  const [pinModalMode, setPinModalMode] = useState<'setup' | 'verify'>('setup');
-  const [pinError, setPinError] = useState('');
-
-  const updateTagScroll = useCallback(() => {
-    const element = tagScrollRef.current;
-    if (!element) return;
-    const height = Math.max(12, (element.clientHeight / Math.max(element.scrollHeight, 1)) * 100);
-    const available = Math.max(0, element.scrollHeight - element.clientHeight);
-    const top = available > 0 ? (element.scrollTop / available) * (100 - height) : 0;
-    setTagScroll({ top, height });
-  }, []);
-
+  const params = useRef(new URLSearchParams(window.location.search)).current;
+  const hasUrlFilters = ["q", "keyword", "search", "category", "sort", "duration"].some(key => params.has(key));
+  const hasRendered = useRef(false);
+  const initialUrlKeyword = useRef(readUrlKeyword()).current;
+  const initialUrlCategory = useRef(readUrlCategory()).current;
+  const initialBatchPage=useRef(hasUrlFilters || readSession(feedSessionKeys.sort) === "latest" || ["short", "medium", "long"].includes(readSession(feedSessionKeys.duration)) ? 1 : Math.max(1,Number(readSession(feedSessionKeys.batchPage))||1)).current;
+  const initialCategory=initialUrlCategory||(hasUrlFilters?"":readSession(feedSessionKeys.category));
+  const initialCategories=useRef(feedCache.categories()).current;
+  const [category, setCategory] = useState(() =>
+      initialCategory,
+    ),
+    [keyword, setKeyword] = useState(() =>
+      initialUrlKeyword || (hasUrlFilters ? "" : readSession(feedSessionKeys.keyword)),
+    ),
+    [categories, setCategories] = useState<Category[]>(initialCategories),
+    [batchPage, setBatchPage] = useState(initialBatchPage),
+    [searchOpen, setSearchOpen] = useState(false);
+  const [product, setProduct] = useState<ProductRuntime | null>(null);
+  const [productReady, setProductReady] = useState(false);
+  const recommendationSeedRef = useRef(recommendationSeed());
+  const searchCategory = keyword ? "" : category;
+  const customRecommendations = (product?.recommendationCategoryIds?.length||0) > 0 || (product?.recommendationKeywords?.length||0) > 0 || product?.recommendationStrategy === "stable";
+  const { videos, total, page, pageCount, loading, ready: firstVideosReady, error, sentinel, retry, loadMore, refresh } = usePagedVideos({ category: searchCategory, q: keyword, product: !keyword && !category && customRecommendations ? product?.slug || "" : "", seed: recommendationSeedRef.current, startPage: batchPage, enabled: productReady && product !== null, cache: true, personalizeFeed: !keyword && product?.recommendationStrategy === "shuffle" });
+  useEffect(() => { if (firstVideosReady) performanceMonitor.dataReady(false); }, [firstVideosReady]);
   useEffect(() => {
-    let frame = 0;
-    const selectFocusedVideo = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        const cards = waterfallRef.current?.querySelectorAll<HTMLElement>('[data-home-video-id]');
-        if (!cards?.length || document.visibilityState !== 'visible') {
-          setFocusedVideoId(null);
-          return;
+    if (!firstVideosReady) return;
+    try {
+      if (sessionStorage.getItem("5knews_home_restore") !== "1") return;
+      const top=Math.max(0,Number(sessionStorage.getItem("5knews_home_scroll"))||0);
+      requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo({top,behavior:"auto"})));
+      sessionStorage.removeItem("5knews_home_restore");
+    } catch { /* Storage may be unavailable in private browsing. */ }
+  }, [firstVideosReady]);
+  useEffect(() => { void productRuntime.load().then(value => { setProduct(value); document.title = value.name; }).finally(()=>setProductReady(true)); }, []);
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem(feedSessionKeys.sort);
+      sessionStorage.removeItem(feedSessionKeys.duration);
+      sessionStorage.setItem(feedSessionKeys.category, category);
+      sessionStorage.setItem(feedSessionKeys.keyword, keyword);
+      sessionStorage.setItem(feedSessionKeys.batchPage, String(batchPage));
+    } catch { /* Storage may be unavailable in private browsing. */ }
+    const url = new URL(window.location.href);
+    url.searchParams.delete("keyword");
+    url.searchParams.delete("search");
+    if (keyword) url.searchParams.set("q", keyword);
+    else url.searchParams.delete("q");
+    const categoryName = categories.find((item) => item.id === category)?.name;
+    if (category) url.searchParams.set("category", categoryName || category);
+    else url.searchParams.delete("category");
+    url.searchParams.delete("sort");
+    url.searchParams.delete("duration");
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [category, keyword, batchPage, categories]);
+  useEffect(() => {
+    void videoApi
+      .categories()
+      .then((items) => {
+        const mapped = items
+          .map((item) => ({
+            ...item,
+            name: item.name === "网曝门" ? "吃瓜" : item.name,
+          }))
+          .sort((left, right) => right.count - left.count);
+        setCategories(mapped);
+        feedCache.saveCategories(mapped);
+        if (initialUrlCategory) {
+          const selected = mapped.find(
+            (item) => item.id === initialUrlCategory || item.name === initialUrlCategory,
+          );
+          if (selected) setCategory(selected.id);
         }
-        const viewportTop = 0;
-        const viewportBottom = window.innerHeight;
-        const viewportCenter = window.innerHeight / 2;
-        let bestId: string | null = null;
-        let bestScore = -Infinity;
-        cards.forEach((card, order) => {
-          const rect = card.getBoundingClientRect();
-          const visibleHeight = Math.max(0, Math.min(rect.bottom, viewportBottom) - Math.max(rect.top, viewportTop));
-          const visibleRatio = visibleHeight / Math.max(1, rect.height);
-          if (visibleRatio < 0.35) return;
-          const centerDistance = Math.abs((rect.top + rect.bottom) / 2 - viewportCenter);
-          // One winner only. Equal side-by-side cards resolve by DOM order (left first).
-          const score = visibleRatio * 10000 - centerDistance - order * 0.001;
-          if (score > bestScore) {
-            bestScore = score;
-            bestId = card.dataset.homeVideoId || null;
-          }
-        });
-        setFocusedVideoId(bestId);
-      });
-    };
-    selectFocusedVideo();
-    window.addEventListener('scroll', selectFocusedVideo, { passive: true });
-    // Mobile Safari can defer scroll events until momentum scrolling ends.
-    // Track the finger as well so the largest visible card changes immediately.
-    window.addEventListener('touchmove', selectFocusedVideo, { passive: true });
-    window.addEventListener('touchend', selectFocusedVideo, { passive: true });
-    window.addEventListener('resize', selectFocusedVideo);
-    document.addEventListener('visibilitychange', selectFocusedVideo);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('scroll', selectFocusedVideo);
-      window.removeEventListener('touchmove', selectFocusedVideo);
-      window.removeEventListener('touchend', selectFocusedVideo);
-      window.removeEventListener('resize', selectFocusedVideo);
-      document.removeEventListener('visibilitychange', selectFocusedVideo);
-    };
-  }, [visibleCount, videos, selectedTags, searchQuery]);
-  useEffect(()=>{void request<{name:string;usageCount:number}[]>('/tags').then(setCatalogTags).catch(console.error)},[videos]);
-  const rememberTag=useCallback((tag:string)=>{setTagUsage(prev=>{const next={...prev,[tag]:(prev[tag]||0)+1};localStorage.setItem('video_tag_usage',JSON.stringify(next));return next})},[]);
-
-  const handleModeToggle = () => {
-    if (mode === '18+') {
-      switchToNormal();
-      return;
-    }
-
-    if (!pinSet) {
-      setPinModalMode('setup');
-      setPinError('');
-      setPinModalOpen(true);
-    } else {
-      setPinModalMode('verify');
-      setPinError('');
-      setPinModalOpen(true);
-    }
+      })
+      .catch(() => {});
+  }, [initialUrlCategory]);
+  const enterCategory = (value: string) => {
+    analytics.track("category_select", { metadata: { category: value || "recommended" } });
+    setKeyword("");
+    setBatchPage(1);
+    setCategory(value);
+    try { sessionStorage.removeItem("5knews_home_restore"); sessionStorage.setItem("5knews_home_scroll","0"); } catch {}
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
-  const handlePinConfirm = (pin: string) => {
-    if (pinModalMode === 'setup') {
-      setPin(pin);
-      switchTo18Plus();
-      setPinModalOpen(false);
-      setPinError('');
-    } else {
-      if (verifyPin(pin)) {
-        switchTo18Plus();
-        setPinModalOpen(false);
-        setPinError('');
-      } else {
-        setPinError('PIN码错误，请重新输入');
-      }
-    }
+  const clearSearch = () => {
+    setKeyword("");
+    setBatchPage(1);
   };
-
-  useEffect(() => {
-    const tagParam = searchParams.get('tag');
-    if (tagParam) {
-      setSelectedTags([tagParam]);
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete('tag');
-      setSearchParams(newParams, { replace: true });
-    }
-  }, [searchParams, setSearchParams]);
-
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    if (mode === '18+') catalogTags.forEach(t=>tagSet.add(t.name));
-    videos
-      .filter((video) => mode === '18+' || !video.isAdult)
-      .forEach((video) => video.tags.forEach((tag) => tagSet.add(tag)));
-    return Array.from(tagSet);
-  }, [catalogTags, videos, mode]);
-
-  const visibleCountryTags = useMemo(
-    () => countryTags.filter((tag) => allTags.includes(tag)),
-    [allTags],
-  );
-
-  const otherTagPool = useMemo(() => {
-    return allTags.filter((t) => !countryTags.includes(t)).sort((a,b)=>{
-      const personal=(tagUsage[b]||0)-(tagUsage[a]||0);
-      return personal||((catalogTags.find(x=>x.name===b)?.usageCount||0)-(catalogTags.find(x=>x.name===a)?.usageCount||0));
-    });
-  }, [allTags, catalogTags, tagUsage]);
-
-  useEffect(() => {
-    if (!tagsExpanded) return;
-    const frame = requestAnimationFrame(updateTagScroll);
-    return () => cancelAnimationFrame(frame);
-  }, [tagsExpanded, otherTagPool, updateTagScroll]);
-
-  const [currentOtherTags, setCurrentOtherTags] = useState<string[]>([]);
-  useEffect(()=>setCurrentOtherTags(otherTagPool.slice(0,7)),[otherTagPool]);
-
-  const suggestions = useMemo((): Suggestion[] => {
-    if (!searchQuery.trim()) return [];
-    const q = searchQuery.trim().toLowerCase();
-    const results: Suggestion[] = [];
-
-    const matchingTags = allTags.filter((t) => t.toLowerCase().includes(q));
-    matchingTags.slice(0, 5).forEach((t) => {
-      results.push({ type: 'tag', text: t, display: `#${t}` });
-    });
-
-    const matchingVideos = videos.filter(
-      (v) =>
-        v.title.toLowerCase().includes(q) ||
-        v.description.toLowerCase().includes(q) ||
-        v.tags.some((t) => t.toLowerCase().includes(q))
-    );
-    matchingVideos.slice(0, 5).forEach((v) => {
-      results.push({ type: 'title', text: v.id, display: v.title });
-    });
-
-    return results.slice(0, 8);
-  }, [searchQuery, allTags, videos]);
-
-  const filteredVideos = useMemo(() => {
-    let result = mode === 'normal' ? videos.filter((v) => !v.isAdult) : videos;
-
-    if (selectedTags.length > 0) {
-      result = result.filter((v) =>
-        selectedTags.some((tag) => v.tags.includes(tag))
-      );
-    }
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
-      result = result.filter(
-        (v) =>
-          v.title.toLowerCase().includes(q) ||
-          v.description.toLowerCase().includes(q) ||
-          v.tags.some((t) => t.toLowerCase().includes(q))
-      );
-    }
-
-    return result;
-  }, [videos, selectedTags, searchQuery, mode]);
-
-  const displayedVideos = useMemo(() => {
-    return filteredVideos.slice(0, visibleCount);
-  }, [filteredVideos, visibleCount]);
-  const focusedVideoIndex = useMemo(
-    () => displayedVideos.findIndex((video) => video.id === focusedVideoId),
-    [displayedVideos, focusedVideoId]
-  );
-
-  const hasMore = visibleCount < filteredVideos.length;
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading) {
-          setLoading(true);
-          setTimeout(() => {
-            setVisibleCount((prev) => prev + 12);
-            setLoading(false);
-          }, 600);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    const el = loaderRef.current;
-    if (el) observer.observe(el);
-
-    return () => {
-      if (el) observer.unobserve(el);
-    };
-  }, [hasMore, loading]);
-
-  const toggleTag = useCallback((tag: string) => {
-    rememberTag(tag);
-    setSelectedTags((prev) => {
-      const removing = prev.length === 1 && prev[0] === tag;
-      setSearchQuery(removing ? '' : tag);
-      return removing ? [] : [tag];
-    });
-    setShowSuggestions(false);
-    setVisibleCount(12);
-  }, [rememberTag]);
-
-  const clearAllTags = useCallback(() => {
-    setSelectedTags([]);
-    setSearchQuery('');
-    setVisibleCount(12);
-  }, []);
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setShowSuggestions(false);
-    setVisibleCount(12);
+  const resetFilters = () => { setKeyword(""); setCategory(""); setBatchPage(1); };
+  const swapFeed = () => {
+    if (keyword) clearSearch();
+    else setBatchPage((value) => (pageCount > 1 ? (value % pageCount) + 1 : 1));
   };
-
-  const handleSuggestionClick = (suggestion: Suggestion) => {
-    if (suggestion.type === 'tag') {
-      rememberTag(suggestion.text);
-      setSelectedTags([suggestion.text]);
-      setSearchQuery(suggestion.text);
-    } else {
-      navigate(`/video/${suggestion.text}`);
-    }
-    setShowSuggestions(false);
-    setVisibleCount(12);
-  };
-
+  if (productReady && product && firstVideosReady) hasRendered.current = true;
+  if (!productReady || !product || !hasRendered.current) return <PageSkeleton />;
   return (
-    <div className="min-h-screen bg-background-50 pb-20">
-      <header className="sticky top-0 z-40 bg-background-50/95 backdrop-blur-md safe-top">
-        <div className="px-4 pt-3 pb-2">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <img
-                src="/icons/5k-video-app-icon-192.png"
-                alt="5K视频"
-                className="w-9 h-9 rounded-[10px] object-cover shadow-lg shadow-primary-500/10"
-              />
-              <div>
-                <h1 className="font-heading text-xl font-bold text-foreground-50 tracking-wide">
-                  5K视频
-                </h1>
-                <p className="text-[10px] text-foreground-500 leading-tight">永久域名：5k.ag</p>
-              </div>
+    <div className="mx-auto min-h-screen w-full max-w-[520px] overflow-x-hidden bg-background-50 shadow-2xl shadow-black/5">
+      <header className="sticky top-0 z-20 px-3 py-3" style={{ background: `linear-gradient(180deg, ${product.themeColor}, ${product.themeColor}dd)` }}>
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 flex-none items-center gap-1.5 text-white">
+            <span className="grid h-8 w-8 place-items-center overflow-hidden rounded-lg bg-white/20">
+              {productIconSource(product.slug, product.iconUrl) ? <EncryptedAssetImage src={productIconSource(product.slug, product.iconUrl)} alt={product.name} className="h-full w-full object-cover" /> : <i className="ri-play-fill text-lg" />}
+            </span>
+            <div className="hidden min-w-0 min-[360px]:block">
+              <b className="block max-w-20 truncate text-[14px]">{product.name}</b>
+              <small className="block whitespace-nowrap text-[9px] opacity-70">
+                永久免费
+              </small>
             </div>
-
-            <button
-              onClick={handleModeToggle}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-colors whitespace-nowrap ${
-                mode === '18+'
-                  ? 'bg-primary-500/15 text-primary-400'
-                  : 'bg-secondary-500/10 text-secondary-400'
-              }`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${mode === '18+' ? 'bg-primary-400' : 'bg-secondary-400'}`} />
-              {mode === 'normal' ? '普通模式' : '18+ 模式'}
-            </button>
           </div>
-
-          <form onSubmit={handleSearchSubmit} className="relative">
-            <div className="relative">
-              <i className="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-foreground-500 text-sm" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setSelectedTags([]);
-                  setShowSuggestions(true);
-                }}
-                onFocus={() => {
-                  setShowSuggestions(true);
-                  setTagsExpanded(true);
-                }}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                placeholder="搜索视频、标题或 #标签"
-                className="w-full bg-background-200 text-foreground-100 text-sm pl-9 pr-4 py-2.5 rounded-xl border border-background-300/50 focus:border-primary-500/50 transition-colors placeholder:text-foreground-500"
-              />
-            </div>
-
-            {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-1 bg-background-200 rounded-xl border border-background-300/50 overflow-hidden shadow-2xl z-50 animate-fade-in">
-                {suggestions.map((s, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleSuggestionClick(s)}
-                    className="w-full text-left px-4 py-2.5 text-sm text-foreground-300 hover:bg-background-300 transition-colors flex items-center gap-2"
-                  >
-                    <i
-                      className={`${
-                        s.type === 'tag' ? 'ri-hashtag' : 'ri-video-line'
-                      } text-foreground-500 text-xs`}
-                    />
-                    <span className="line-clamp-1">{s.display}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </form>
-        </div>
-
-        <div className="px-4 pb-2">
-          <div className="mb-1.5">
-            {tagsExpanded ? (
-              <>
-                <div className="relative">
-                  <div
-                    ref={tagScrollRef}
-                    onScroll={updateTagScroll}
-                    className="h-[225px] overflow-y-scroll pr-3"
-                  >
-                    <div className="flex flex-wrap gap-x-1.5 gap-y-1.5 pb-4">
-                      {visibleCountryTags.map((tag) => (
-                        <TagCapsule key={tag} label={tag} selected={selectedTags.includes(tag)} onClick={() => toggleTag(tag)} />
-                      ))}
-                      <span className="w-px h-4 bg-background-300/60 mx-0.5 self-center" />
-                      {otherTagPool.map((tag) => (
-                        <TagCapsule key={tag} label={tag} selected={selectedTags.includes(tag)} onClick={() => toggleTag(tag)} />
-                      ))}
-                    </div>
-                  </div>
-                  <div className="pointer-events-none absolute bottom-0 right-0 top-0 w-1 rounded-full bg-background-300/70">
-                    <div
-                      className="absolute left-0 w-1 rounded-full bg-primary-400"
-                      style={{ top: `${tagScroll.top}%`, height: `${tagScroll.height}%` }}
-                    />
-                  </div>
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3 bg-gradient-to-t from-background-50 to-transparent" />
-                </div>
-                <div className="flex justify-end pt-1">
-                  <button onClick={() => setTagsExpanded(false)} className="flex h-6 items-center gap-0.5 rounded-full px-2 text-[11px] text-primary-400 hover:bg-background-200 transition-colors">
-                    收起<i className="ri-arrow-up-s-line text-sm" />
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-wrap gap-x-1.5 gap-y-1.5">
-              {visibleCountryTags.map((tag) => (
-                <TagCapsule
-                  key={tag}
-                  label={tag}
-                  selected={selectedTags.includes(tag)}
-                  onClick={() => toggleTag(tag)}
-                />
-              ))}
-              <span className="w-px h-4 bg-background-300/60 mx-0.5 self-center" />
-              {currentOtherTags.map((tag) => (
-                <TagCapsule
-                  key={tag}
-                  label={tag}
-                  selected={selectedTags.includes(tag)}
-                  onClick={() => toggleTag(tag)}
-                />
-              ))}
-              <button
-                onClick={() => setTagsExpanded((value) => !value)}
-                className="ml-auto flex h-6 items-center gap-0.5 rounded-full px-2 text-[11px] text-primary-400 hover:bg-background-200 transition-colors"
-              >
-                展开
-                <i className="ri-arrow-down-s-line text-sm" />
-              </button>
-              </div>
-            )}
-          </div>
-
-          {selectedTags.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex flex-wrap gap-1.5">
-                {selectedTags.map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={() => toggleTag(tag)}
-                    className="whitespace-nowrap bg-primary-500/15 text-primary-400 text-[11px] px-2.5 py-1 rounded-full flex items-center gap-1 hover:bg-primary-500/25 transition-colors"
-                  >
-                    #{tag}
-                    <i className="ri-close-line text-xs" />
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={clearAllTags}
-                className="whitespace-nowrap text-[11px] text-foreground-500 hover:text-foreground-300 transition-colors"
-              >
-                清除全部
-              </button>
-            </div>
-          )}
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="flex h-10 flex-1 items-center gap-2 rounded-full bg-black/25 px-3 text-left"
+          >
+            <i className="ri-search-line text-white/80" />
+            <span className="truncate text-sm text-white/55">
+              {keyword || "搜索感兴趣的视频"}
+            </span>
+          </button>
+          <Link
+            to="/profile"
+            aria-label="个人中心"
+            title="个人中心"
+            className="grid h-10 w-10 flex-none place-items-center rounded-full bg-accent-500 text-white"
+          >
+            <i className="ri-user-3-line text-lg" />
+          </Link>
         </div>
       </header>
-
-      <main className="px-3 mt-2">
-        {filteredVideos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <i className="ri-search-line text-5xl text-foreground-700 mb-4" />
-            <p className="text-foreground-500 text-sm">没有找到相关视频</p>
-            <p className="text-foreground-600 text-xs mt-1">尝试其他搜索词或标签</p>
-            {selectedTags.length > 0 && (
-              <button
-                onClick={clearAllTags}
-                className="mt-4 px-4 py-2 bg-primary-500 text-background-50 rounded-full text-sm font-medium hover:bg-primary-600 transition-colors"
-              >
-                清除筛选
-              </button>
-            )}
-          </div>
-        ) : (
-          <>
-            <div
-              ref={waterfallRef}
-              className="grid w-full items-start gap-2.5"
-              style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}
-            >
-              {[0, 1].map((column) => (
-                <div key={column} className="flex w-full min-w-0 flex-col gap-2.5">
-                  {displayedVideos.map((video, i) =>
-                    i % 2 === column ? (
-                      <div key={video.id} data-home-video-id={video.id}>
-                        <VideoCard
-                          video={video}
-                          index={i}
-                          isFocused={focusedVideoId === video.id}
-                          shouldPreload={focusedVideoIndex >= 0 && Math.abs(i - focusedVideoIndex) <= 2}
-                        />
-                      </div>
-                    ) : null
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <div ref={loaderRef} className="py-6 flex justify-center">
-              {loading && (
-                <div className="flex items-center gap-2 text-foreground-500 text-sm">
-                  <div className="w-4 h-4 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-                  加载中...
-                </div>
-              )}
-              {!hasMore && filteredVideos.length > 0 && (
-                <p className="text-foreground-600 text-xs">已加载全部视频</p>
-              )}
-            </div>
-          </>
-        )}
-      </main>
-
-      {pinModalOpen && (
-        <PinModal
-          mode={pinModalMode}
-          error={pinError}
-          onConfirm={handlePinConfirm}
-          onCancel={() => {
-            setPinModalOpen(false);
-            setPinError('');
-          }}
+      <div className="sticky top-[64px] z-10 border-b border-background-200 bg-background-50">
+        <CategoryTabs
+          active={keyword ? "" : category}
+          categories={categories}
+          onChange={enterCategory}
         />
-      )}
-
-      <BottomNav />
+      </div>
+      <NavigationBanner />
+      <FiveKAdSlot zone={HOME_POPUP_ZONE} limit={1} />
+      <main className="pb-24 pt-3">
+        {!keyword && !category && <ContinueWatching />}
+        {(category || keyword) && <button onClick={resetFilters} className="mb-3 ml-3 rounded-full bg-background-100 px-3 py-2 text-xs text-foreground-600">清除全部筛选</button>}
+        {keyword && (
+          <div className="mx-3 mb-3 flex items-center justify-between rounded-lg bg-primary-50 px-3 py-2">
+            <span className="min-w-0 truncate text-xs text-primary-700">
+              搜索：{keyword}
+            </span>
+            <button
+              onClick={clearSearch}
+              className="ml-2 flex-none text-xs font-bold text-primary-600"
+            >
+              <i className="ri-arrow-left-line mr-1" />
+              返回
+            </button>
+          </div>
+        )}
+        <div className="mb-2 flex items-center justify-between px-3">
+          <b className="text-sm text-foreground-900">
+            {keyword ? "搜索结果" : categories.find((item) => item.id === category)?.name || "为你推荐"}
+            <small className="ml-1 font-normal text-foreground-400">
+              {total.toLocaleString()} 条
+            </small>
+          </b>
+          <button
+            onClick={swapFeed}
+            className="flex items-center gap-1 rounded-full bg-background-100 px-3 py-1 text-xs font-semibold text-foreground-600"
+          >
+            <i className="ri-shuffle-line" />
+            {keyword ? "清除搜索" : "换一批"}
+          </button>
+        </div>
+        {error && !videos.length ? (
+          <div className="px-6 py-20 text-center">
+            <p className="text-sm text-red-500">{error}</p>
+            <button
+              onClick={retry}
+              className="mt-3 rounded-full bg-primary-500 px-4 py-2 text-xs text-white"
+            >
+              重新加载
+            </button>
+          </div>
+        ) : loading && !videos.length ? (
+          <VideoSkeleton />
+        ) : videos.length ? (
+          <Waterfall videos={videos} />
+        ) : (
+          <div className="py-20 text-center text-sm text-foreground-400">
+            <p>没有找到相关视频</p>
+            <button
+              onClick={resetFilters}
+              className="mt-4 rounded-full bg-primary-500 px-5 py-2 text-xs font-bold text-white"
+            >
+              返回全部视频
+            </button>
+          </div>
+        )}
+        <div
+          ref={sentinel}
+          className="py-8 text-center text-xs text-foreground-400"
+        >
+          {error && videos.length > 0 ? <div role="status"><p>{error}</p><button onClick={retry} className="mt-3 rounded-full bg-primary-500 px-4 py-2 text-white">重试加载</button></div> : loading && videos.length
+            ? "正在加载…"
+            : !loading && page < pageCount
+              ? <button onClick={loadMore} className="rounded-full px-4 py-2">加载更多</button>
+              : !loading
+                ? "已经到底了"
+                : ""}
+        </div>
+      </main>
+      <SearchPanel
+        open={searchOpen}
+        keyword={keyword}
+        categories={categories}
+        onCategorySelect={enterCategory}
+        onClose={() => setSearchOpen(false)}
+        onSearch={(value) => {
+          topicInterests.search(value);
+          analytics.track("search", { metadata: { keyword: value } });
+          setBatchPage(1);
+          setKeyword(value);
+          refresh();
+          setSearchOpen(false);
+        }}
+        onTagSelect={(value) => {
+          topicInterests.search(value);
+          analytics.track("search", { metadata: { keyword: value, source: "tag" } });
+          setBatchPage(1);
+          setKeyword(value);
+          refresh();
+          setSearchOpen(false);
+        }}
+      />
     </div>
   );
 }

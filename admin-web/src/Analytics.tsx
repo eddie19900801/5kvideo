@@ -3,6 +3,8 @@ import {
   Card,
   Col,
   Empty,
+  Button,
+  Modal,
   Row,
   Select,
   Space,
@@ -16,10 +18,13 @@ import { api } from "./api";
 
 type AnalyticsData = {
   days: number;
+  selectedChannel: string;
+  channels: Array<{channel:string;name?:string;events:number;users:number;pageViews:number;plays:number}>;
   overview: {
     activeUsers: number;
     sessions: number;
     newUsers: number;
+    installs: number;
     registeredUsers: number;
     guestUsers: number;
     impressions: number;
@@ -99,6 +104,8 @@ type AnalyticsData = {
   platforms: Array<{ platform: string; users: number; events: number }>;
 };
 type PerfMetric={samples:number;p50:number;p90:number;p95:number};
+type IpVisitResult={date:string;channel:string;page:number;pageSize:number;total:number;items:Array<{ip:string;firstVisitedAt:string;lastVisitedAt:string;events:number;devices:number;sessions:number}>};
+type ProductOption={id:string;name:string;slug:string;status:string};
 
 const duration = (seconds: number) =>
   seconds >= 3600
@@ -109,16 +116,42 @@ const platformName = (value: string) =>
 
 function AnalyticsPanel({ page,compact=false }: { page: string;compact?:boolean }) {
   const [days, setDays] = useState(30),
+    [product, setProduct] = useState(""),
+    [products, setProducts] = useState<ProductOption[]>([]),
+    [channel, setChannel] = useState(""),
     [data, setData] = useState<AnalyticsData>(),
-    [loading, setLoading] = useState(false);
+    [loading, setLoading] = useState(false),
+    [ipDate, setIpDate] = useState(""),
+    [ipPage, setIpPage] = useState(1),
+    [ipData, setIpData] = useState<IpVisitResult>(),
+    [ipLoading, setIpLoading] = useState(false);
+  const loadIpVisits=(date:string,page=1)=>{setIpDate(date);setIpPage(page);setIpLoading(true);void api<IpVisitResult>(`/admin/analytics/ip-visits?date=${encodeURIComponent(date)}&page=${page}&pageSize=20${product?`&product=${encodeURIComponent(product)}`:""}${channel?`&channel=${encodeURIComponent(channel)}`:""}`).then(setIpData).catch(error=>message.error(error.message)).finally(()=>setIpLoading(false))};
+  useEffect(()=>{void api<ProductOption[]>("/admin/product-lines").then(setProducts).catch(()=>setProducts([]))},[]);
   useEffect(() => {
     let active=true,first=true;
-    const useCompact=compact&&page!=="analytics-videos",load=()=>{if(first)setLoading(true);void api<AnalyticsData>(`/admin/analytics?days=${days}${useCompact?"&compact=1":""}`).then(value=>{if(active)setData(value)}).catch(error=>{if(active)message.error(error.message)}).finally(()=>{if(active)setLoading(false);first=false})};
+    const useCompact=compact&&page!=="analytics-videos",load=()=>{if(first)setLoading(true);void api<AnalyticsData>(`/admin/analytics?days=${days}${useCompact?"&compact=1":""}${product?`&product=${encodeURIComponent(product)}`:""}${channel?`&channel=${encodeURIComponent(channel)}`:""}`).then(value=>{if(active)setData(value)}).catch(error=>{if(active)message.error(error.message)}).finally(()=>{if(active)setLoading(false);first=false})};
     load();const timer=window.setInterval(load,30_000);
     return()=>{active=false;window.clearInterval(timer)};
-  }, [days,page,compact]);
+  }, [days,page,compact,product,channel]);
   const extra = (
     <Space>
+      <span>产品</span>
+      <Select
+        value={product}
+        onChange={value=>{setProduct(value);setChannel("")}}
+        style={{ minWidth: 180 }}
+        options={[{value:"",label:"全部产品"},...products.map(item=>({value:item.id,label:`${item.name}（${item.slug}）`}))]}
+      />
+      <span>渠道</span>
+      <Select
+        value={channel}
+        onChange={setChannel}
+        style={{ minWidth: 160 }}
+        options={[
+          { value: "", label: "全部渠道" },
+          ...(data?.channels || []).map(item => ({ value: item.channel, label: item.channel === "direct" ? "自然流量（direct）" : item.name ? `${item.name}（${item.channel}）` : item.channel })),
+        ]}
+      />
       <span>统计周期</span>
       <Select
         value={days}
@@ -146,7 +179,7 @@ function AnalyticsPanel({ page,compact=false }: { page: string;compact?:boolean 
             { title: "日期", dataIndex: "date", fixed: "left", width: 110 },
             { title: "访问量(PV)", dataIndex: "visits" },
             { title: "独立访客(UV)", dataIndex: "uniqueVisitors" },
-            { title: "独立IP", dataIndex: "uniqueIps" },
+            { title: "独立IP", dataIndex: "uniqueIps", render:(value:number,row:AnalyticsData["daily"][number])=><Button type="link" size="small" disabled={!value} onClick={()=>loadIpVisits(row.date,1)}>{value}</Button> },
             { title: "新增设备", dataIndex: "newDevices" },
             { title: "APP安装", dataIndex: "installs" },
             { title: "游客账号", dataIndex: "guestAccounts" },
@@ -186,6 +219,17 @@ function AnalyticsPanel({ page,compact=false }: { page: string;compact?:boolean 
             { title: "播放失败", dataIndex: "playbackFailures" },
           ]}
         />
+        <Modal open={Boolean(ipDate)} title={`${ipDate} · 独立 IP 访问明细`} onCancel={()=>{setIpDate("");setIpData(undefined)}} footer={null} width={900} destroyOnHidden>
+          <Table rowKey="ip" loading={ipLoading} dataSource={ipData?.items||[]} pagination={{current:ipPage,pageSize:20,total:ipData?.total||0,showSizeChanger:false,onChange:page=>loadIpVisits(ipDate,page)}} columns={[
+            {title:"真实 IP",dataIndex:"ip",width:180},
+            {title:"首次访问",dataIndex:"firstVisitedAt",render:value=>new Date(value).toLocaleString("zh-CN")},
+            {title:"最后访问",dataIndex:"lastVisitedAt",render:value=>new Date(value).toLocaleString("zh-CN")},
+            {title:"事件数",dataIndex:"events",width:90},
+            {title:"设备数",dataIndex:"devices",width:90},
+            {title:"会话数",dataIndex:"sessions",width:90},
+          ]}/>
+          <p style={{color:"#8c8c8c",marginBottom:0}}>仅显示真实 IP 功能上线后采集的数据；旧哈希记录无法还原。</p>
+        </Modal>
       </Card>
     );
   if (page === "analytics-users")
@@ -388,11 +432,12 @@ function AnalyticsPanel({ page,compact=false }: { page: string;compact?:boolean 
     );
   const overview = data?.overview;
   return (
-    <Card title="数据分析总览" extra={extra}>
+    <><Card title="数据分析总览" extra={extra}>
       <Row gutter={[16, 16]}>
         {[
           { title: "活跃用户", value: overview?.activeUsers },
           { title: "新增用户", value: overview?.newUsers },
+          { title: "安装量", value: overview?.installs },
           { title: "会话次数", value: overview?.sessions },
           { title: "视频曝光", value: overview?.impressions },
           { title: "播放次数", value: overview?.plays },
@@ -412,6 +457,21 @@ function AnalyticsPanel({ page,compact=false }: { page: string;compact?:boolean 
         ))}
       </Row>
     </Card>
+    <Card title="渠道来源" style={{ marginTop: 16 }}>
+      <Table
+        loading={loading}
+        rowKey="channel"
+        pagination={{ pageSize: 20 }}
+        dataSource={data?.channels || []}
+        columns={[
+          { title: "渠道", dataIndex: "channel", render: (value, row) => value === "direct" ? "自然流量（direct）" : row.name ? `${row.name}（${value}）` : value },
+          { title: "访问量(PV)", dataIndex: "pageViews" },
+          { title: "独立用户", dataIndex: "users" },
+          { title: "播放", dataIndex: "plays" },
+          { title: "事件数", dataIndex: "events" },
+        ]}
+      />
+    </Card></>
   );
 }
 

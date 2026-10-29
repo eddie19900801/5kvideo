@@ -1,6 +1,6 @@
 import { useNavigate, type NavigateFunction } from "react-router-dom";
 import { useRoutes } from "react-router-dom";
-import { Suspense, createElement, useEffect } from "react";
+import { useEffect } from "react";
 import routes from "./config";
 
 let navigateResolver: (navigate: ReturnType<typeof useNavigate>) => void;
@@ -22,9 +22,5 @@ export function AppRoutes() {
     window.REACT_APP_NAVIGATE = navigate;
     navigateResolver(window.REACT_APP_NAVIGATE);
   });
-  return createElement(
-    Suspense,
-    { fallback: createElement("div", { className: "min-h-screen bg-black", "aria-label": "页面加载中" }) },
-    element,
-  );
+  return element;
 }

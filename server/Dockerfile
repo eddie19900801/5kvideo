@@ -5,6 +5,7 @@ RUN npm ci
 COPY tsconfig.json ./
 COPY src ./src
 COPY assets ./assets
+COPY migrations ./migrations
 RUN npm run build && npm prune --omit=dev
 
 FROM node:22-bookworm-slim
@@ -17,6 +18,7 @@ ENV NODE_ENV=production PORT=4000 DATA_FILE=/app/data/db.json FFMPEG_PATH=/usr/b
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/assets ./assets
+COPY --from=build /app/migrations ./migrations
 COPY package.json ./
 EXPOSE 4000
 CMD ["node", "dist/index.js"]

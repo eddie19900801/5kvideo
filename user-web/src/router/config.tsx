@@ -1,46 +1,29 @@
-import type { RouteObject } from 'react-router-dom';
-import { lazy } from 'react';
-
-const NotFound = lazy(() => import('@/pages/NotFound'));
-const Home = lazy(() => import('@/pages/home/page'));
-const VideoPlayer = lazy(() => import('@/pages/video/page'));
-const Favorites = lazy(() => import('@/pages/favorites/page'));
-const Profile = lazy(() => import('@/pages/profile/page'));
-const Login = lazy(() => import('@/pages/login/page'));
-const History = lazy(() => import('@/pages/history/page'));
-const Recommend = lazy(() => import('@/pages/recommend/page'));
+import type { RouteObject } from "react-router-dom";
+import NotFound from "../pages/NotFound";
+import Home from "../pages/home/page";
+import VideoDetail from "../pages/video/page";
+import Profile from "../pages/profile/page";
+import DownloadPage from "../pages/download/page";
 
 const routes: RouteObject[] = [
   {
-    path: '/',
+    path: "/",
     element: <Home />,
   },
   {
-    path: '/video/:id',
-    element: <VideoPlayer />,
+    path: "/video/:id",
+    element: <VideoDetail />,
   },
   {
-    path: '/favorites',
-    element: <Favorites />,
-  },
-  {
-    path: '/profile',
+    path: "/profile",
     element: <Profile />,
   },
   {
-    path: '/login',
-    element: <Login />,
+    path: "/download",
+    element: <DownloadPage />,
   },
   {
-    path: '/history',
-    element: <History />,
-  },
-  {
-    path: '/recommend',
-    element: <Recommend />,
-  },
-  {
-    path: '*',
+    path: "*",
     element: <NotFound />,
   },
 ];

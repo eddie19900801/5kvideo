@@ -64,6 +64,70 @@ export interface AnalyticsEvent {
   value?: number;
   metadata?: Record<string, string | number | boolean>;
 }
+export interface TrafficChannel {
+  id: string;
+  code: string;
+  name: string;
+  createdAt: string;
+}
+export interface ProductLine {
+  id: string;
+  name: string;
+  slug: string;
+  domain: string;
+  domains: string[];
+  landingDomain: string;
+  landingDomains: string[];
+  landingPage: null;
+  packageName: string;
+  iconUrl: string;
+  themeColor: string;
+  recommendationCategoryIds: string[];
+  recommendationKeywords: string[];
+  /** @deprecated Retained only to read old product records. */
+  recommendationVideoIds: string[];
+  recommendationStrategy: "stable" | "shuffle";
+  status: "draft" | "active" | "disabled";
+  version: number;
+  publishedConfig?: {
+    name: string;
+    domain: string;
+    domains: string[];
+    landingDomain: string;
+    landingDomains: string[];
+    landingPage: null;
+    packageName: string;
+    iconUrl: string;
+    themeColor: string;
+    recommendationCategoryIds: string[];
+    recommendationKeywords: string[];
+    recommendationVideoIds: string[];
+    recommendationStrategy: "stable" | "shuffle";
+  };
+  publishedAt?: string;
+  deployment?: {
+    status: "queued" | "checking" | "ready" | "failed";
+    dnsReady: boolean;
+    tlsReady: boolean;
+    frontendReady: boolean;
+    runtimeReady: boolean;
+    packagesReady: boolean;
+    checkedAt?: string;
+    error?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+export interface CollectorSource {
+  id: string;
+  key: string;
+  name: string;
+  endpoint: string;
+  fallbackEndpoint?: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 export interface MediaJob {
   id: string;
   type: "transcode";
@@ -85,6 +149,10 @@ export interface Database {
   favorites: { userId: string; videoId: string; createdAt: string; mode?: "normal" | "adult" }[];
   progress: Progress[];
   analyticsEvents: AnalyticsEvent[];
+  channels: TrafficChannel[];
+  productLines: ProductLine[];
+  productDomains: string[];
+  collectorSources: CollectorSource[];
   auditLogs: {
     id: string;
     adminId: string;

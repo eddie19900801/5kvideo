@@ -6,6 +6,8 @@ import type { DatabaseRepository } from "./database.js";
 
 export class JsonDatabaseRepository implements DatabaseRepository {
   private cached?:{mtime:number;value:Database};
+  private pendingWrite?: NodeJS.Timeout;
+  private pendingSince?: number;
   constructor(private readonly file: string) {}
 
   private createSeed(): Database {
@@ -39,6 +41,16 @@ export class JsonDatabaseRepository implements DatabaseRepository {
       favorites: [],
       progress: [],
       analyticsEvents: [],
+      channels: [],
+      productLines: [],
+      productDomains: ["wflhc.cn"],
+      collectorSources: [
+        { id: "collector-hsckm3u8", key: "hsckm3u8", name: "黄色仓库 M3U8", endpoint: "https://hsckzy888.com/api.php/provide/vod/from/hsckm3u8/at/json/", fallbackEndpoint: "https://hszyckapi.vip/api.php/provide/vod/from/hsckm3u8/at/json/", enabled: true, createdAt, updatedAt: createdAt },
+        { id: "collector-jipinvip-dplayer", key: "jipinvip_dplayer", name: "新极品 dplayer", endpoint: "https://jipinvip1.com/api.php/provide/vod/from/dplayer/", enabled: true, createdAt, updatedAt: createdAt },
+        { id: "collector-yuanlib", key: "yuanlib", name: "源力资源", endpoint: "https://yuanlib.com/api.php/provide/vod/", enabled: true, createdAt, updatedAt: createdAt },
+        { id: "collector-heiliaozy", key: "heiliaozy", name: "黑料资源", endpoint: "https://heiliaozyapi.com/api.php/provide/vod", enabled: true, createdAt, updatedAt: createdAt },
+        { id: "collector-xyezy", key: "xyezy", name: "星夜资源", endpoint: "https://xyezy.com/api.php/provide/vod/", enabled: true, createdAt, updatedAt: createdAt },
+      ],
       auditLogs: [],
       mediaJobs: [],
     };
@@ -59,6 +71,72 @@ export class JsonDatabaseRepository implements DatabaseRepository {
     database.tags ||= [];
     database.categories ||= [];
     database.analyticsEvents ||= [];
+    database.channels ||= [];
+    const createdAt=new Date().toISOString();
+    database.productLines ||= [];
+    database.productDomains ||= ["wflhc.cn"];
+    if (!database.productLines.length) {
+      database.productLines.push({
+        id: "product-ppfree",
+        name: "PP免费",
+        slug: "ppfree",
+        domain: "5knews.wflhc.cn",
+        domains: ["5knews.wflhc.cn"],
+        landingDomain: "ppfree.download.wflhc.cn",
+        landingDomains: ["ppfree.download.wflhc.cn"],
+        landingPage: null,
+        packageName: "cn.ppfree.video",
+        iconUrl: "",
+        themeColor: "#ef4444",
+        recommendationCategoryIds: [],
+        recommendationKeywords: [],
+        recommendationVideoIds: [],
+        recommendationStrategy: "shuffle",
+        status: "active",
+        version: 1,
+        publishedConfig: { name: "PP免费", domain: "5knews.wflhc.cn", domains: ["5knews.wflhc.cn"], landingDomain:"ppfree.download.wflhc.cn", landingDomains:["ppfree.download.wflhc.cn"], landingPage:null, packageName: "cn.ppfree.video", iconUrl: "", themeColor: "#ef4444", recommendationCategoryIds: [], recommendationKeywords: [], recommendationVideoIds: [], recommendationStrategy: "shuffle" },
+        publishedAt: createdAt,
+        createdAt,
+        updatedAt: createdAt,
+      });
+    }
+    for (const product of database.productLines) {
+      product.domains ||= [product.domain];
+      product.landingDomains ||= (database.productDomains||["wflhc.cn"]).map(base=>`${product.slug}.download.${base}`);
+      product.landingDomain ||= product.landingDomains[0];
+      product.landingPage ??= null;
+      product.recommendationCategoryIds ||= [];
+      product.recommendationKeywords ||= [];
+      product.recommendationVideoIds ||= [];
+      product.recommendationStrategy ||= "shuffle";
+      if (product.publishedConfig) {
+        product.publishedConfig.domains ||= [product.publishedConfig.domain];
+        product.publishedConfig.landingDomains ||= [...product.landingDomains];
+        product.publishedConfig.landingDomain ||= product.publishedConfig.landingDomains[0];
+        product.publishedConfig.landingPage ??= null;
+        product.publishedConfig.recommendationCategoryIds ||= [];
+        product.publishedConfig.recommendationKeywords ||= [];
+        product.publishedConfig.recommendationVideoIds ||= [];
+        product.publishedConfig.recommendationStrategy ||= "shuffle";
+      }
+      if (product.status === "active" && !product.publishedConfig) product.publishedConfig = {
+        name: product.name, domain: product.domain, domains: [...product.domains], landingDomain:product.landingDomain, landingDomains:[...product.landingDomains], landingPage:product.landingPage, packageName: product.packageName,
+        iconUrl: product.iconUrl, themeColor: product.themeColor,
+        recommendationCategoryIds: [...product.recommendationCategoryIds],
+        recommendationKeywords: [...product.recommendationKeywords],
+        recommendationVideoIds: [...product.recommendationVideoIds],
+        recommendationStrategy: product.recommendationStrategy,
+      };
+    }
+    database.collectorSources ||= [];
+    const defaults=[
+      { id: "collector-hsckm3u8", key: "hsckm3u8", name: "黄色仓库 M3U8", endpoint: "https://hsckzy888.com/api.php/provide/vod/from/hsckm3u8/at/json/", fallbackEndpoint: "https://hszyckapi.vip/api.php/provide/vod/from/hsckm3u8/at/json/", enabled: true, createdAt, updatedAt: createdAt },
+      { id: "collector-jipinvip-dplayer", key: "jipinvip_dplayer", name: "新极品 dplayer", endpoint: "https://jipinvip1.com/api.php/provide/vod/from/dplayer/", enabled: true, createdAt, updatedAt: createdAt },
+      { id: "collector-yuanlib", key: "yuanlib", name: "源力资源", endpoint: "https://yuanlib.com/api.php/provide/vod/", enabled: true, createdAt, updatedAt: createdAt },
+      { id: "collector-heiliaozy", key: "heiliaozy", name: "黑料资源", endpoint: "https://heiliaozyapi.com/api.php/provide/vod", enabled: true, createdAt, updatedAt: createdAt },
+      { id: "collector-xyezy", key: "xyezy", name: "星夜资源", endpoint: "https://xyezy.com/api.php/provide/vod/", enabled: true, createdAt, updatedAt: createdAt },
+    ];
+    for(const source of defaults)if(!database.collectorSources.some(item=>item.key===source.key))database.collectorSources.push(source);
     database.auditLogs ||= [];
     database.mediaJobs ||= [];
     this.cached={mtime,value:database};return database;
@@ -67,8 +145,40 @@ export class JsonDatabaseRepository implements DatabaseRepository {
   transaction<T>(operation: (database: Database) => T): T {
     const database = this.read();
     const result = operation(database);
-    fs.writeFileSync(this.file, JSON.stringify(database));
-    this.cached={mtime:fs.statSync(this.file).mtimeMs,value:database};
+    if (this.pendingWrite) {
+      clearTimeout(this.pendingWrite);
+      this.pendingWrite = undefined;
+      this.pendingSince = undefined;
+    }
+    this.persist(database);
     return result;
+  }
+
+  /**
+   * Apply small admin mutations immediately, then coalesce the expensive full
+   * JSON snapshot write. The in-memory value is authoritative during the short
+   * delay, and any normal transaction flushes it synchronously first.
+   */
+  transactionDeferred<T>(operation: (database: Database) => T, delayMs = 150): T {
+    const database = this.read();
+    const result = operation(database);
+    const now = Date.now();
+    this.pendingSince ??= now;
+    if (this.pendingWrite) clearTimeout(this.pendingWrite);
+    const wait = Math.max(0, Math.min(delayMs, 5_000 - (now - this.pendingSince)));
+    this.pendingWrite = setTimeout(() => {
+      this.pendingWrite = undefined;
+      this.pendingSince = undefined;
+      this.persist(database);
+    }, wait);
+    this.pendingWrite.unref();
+    return result;
+  }
+
+  private persist(database: Database) {
+    const temporary=`${this.file}.tmp-${process.pid}`;
+    fs.writeFileSync(temporary, JSON.stringify(database));
+    fs.renameSync(temporary,this.file);
+    this.cached={mtime:fs.statSync(this.file).mtimeMs,value:database};
   }
 }

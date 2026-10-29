@@ -119,7 +119,7 @@ export class JsonInteractionRepository implements InteractionRepository {
   }
 
   recordView(videoId: string, userId: string, role: "user" | "admin"): number {
-    return this.database.transaction((database) => {
+    return this.database.transactionDeferred((database) => {
       const video = database.videos.find((item) => item.id === videoId);
       if (video) video.views = (video.views || 0) + 1;
       const now = new Date().toISOString();
@@ -130,7 +130,7 @@ export class JsonInteractionRepository implements InteractionRepository {
       }
       if (user) { user.lastSeenAt = now; user.visitCount = (user.visitCount || 0) + 1; }
       return video?.views || 0;
-    });
+    }, 750);
   }
 
   setFavorite(userId: string, videoId: string, mode: ContentMode, favorited: boolean): void {
@@ -142,14 +142,14 @@ export class JsonInteractionRepository implements InteractionRepository {
   }
 
   saveProgress(userId: string, videoId: string, progress: number, duration: number, mode: ContentMode): void {
-    this.database.transaction((database) => {
+    this.database.transactionDeferred((database) => {
       const old = database.progress.find((item) => item.userId === userId && item.videoId === videoId && (item.mode || "normal") === mode);
       const previous = old?.progress || 0;
       const record = { userId, videoId, progress, duration, mode, completed: progress / duration >= 0.95 || duration - progress <= 20, updatedAt: new Date().toISOString() };
       if (old) Object.assign(old, record); else database.progress.push(record);
       const user = database.users.find((item) => item.id === userId);
       if (user) { user.lastSeenAt = record.updatedAt; user.totalWatchSeconds = (user.totalWatchSeconds || 0) + Math.max(0, progress - previous); }
-    });
+    }, 750);
   }
 
   deleteProgress(userId: string, videoId: string, mode: ContentMode): void {

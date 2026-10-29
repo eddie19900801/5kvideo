@@ -4,14 +4,15 @@ import path from "node:path";
 import { Router } from "express";
 import { z } from "zod";
 import { adminOnly, authenticate, type AuthRequest } from "../auth.js";
-import { videoRepository } from "../db.js";
+import { updateDb, videoRepository, readDb } from "../db.js";
 import { ok } from "../http.js";
 import type { Video } from "../types.js";
 import { generateMissingHighlights } from "../services/highlightGenerator.js";
 import { adoptCollectorPreviews, collectorPreviewDirectory, collectorPreviewQueueStatus, deleteCollectorPreview, generateCollectorPreviews, readCollectorPreviews, resetCollectorPreviewQueueStats, setCollectorPreviewQueuePaused } from "../services/collectorPreviewGenerator.js";
 import { requestApiBase } from "../services/playback.js";
 import { collectorSyncStatus, runCollectorCatalogSync } from "../services/collectorCatalogSync.js";
-import { assignCollectorCategory, collectorTaxonomy, createCollectorCategory, deleteCollectorCategory, renameCollectorCategory } from "../services/collectorTaxonomy.js";
+import { assignCollectorCategory, collectorTaxonomy, createCollectorCategory, deleteCollectorCategory, mergeCollectorCategories, renameCollectorCategory, reorderCollectorCategories } from "../services/collectorTaxonomy.js";
+import { collectorPreviewId, collectorSourceName, collectorVideoId } from "../services/collectorIdentity.js";
 
 export const adminCollectorsRouter = Router();
 adminCollectorsRouter.use(authenticate, adminOnly);
@@ -104,14 +105,17 @@ async function fetchRemote(path: string) {
 }
 
 adminCollectorsRouter.get("/collectors/sources", (_req, res) =>
-  ok(res, Object.values(sources).map(source => ({ ...source, enabled: true }))),
+  ok(res, readDb().collectorSources.map(source => ({ ...source, videoCount:(localCatalog()||[]).filter(video=>video.externalSource?.sourceKey===source.key).length }))),
 );
+adminCollectorsRouter.patch('/collectors/sources/:id',(req:AuthRequest,res)=>{const input=z.object({name:z.string().trim().min(1).max(50).optional(),enabled:z.boolean().optional()}).strict().safeParse(req.body);if(!input.success)return res.status(400).json({error:{code:'VALIDATION_ERROR',message:'片源配置无效'}});let updated:any;updateDb(db=>{const source=db.collectorSources.find(item=>item.id===req.params.id);if(!source)return;if(input.data.name!==undefined)source.name=input.data.name;if(input.data.enabled!==undefined)source.enabled=input.data.enabled;source.updatedAt=new Date().toISOString();updated=source;db.auditLogs.push({id:randomUUID(),adminId:req.auth!.id,action:'collector-source.update',targetId:source.id,createdAt:source.updatedAt})});if(!updated)return res.status(404).json({error:{code:'NOT_FOUND',message:'片源不存在'}});return ok(res,updated)});
 adminCollectorsRouter.get('/collectors/sync',(_req,res)=>ok(res,collectorSyncStatus()));
 adminCollectorsRouter.post('/collectors/sync',(_req,res)=>{void runCollectorCatalogSync();res.status(202);return ok(res,{...collectorSyncStatus(),running:true})});
 adminCollectorsRouter.get('/collectors/categories',(_req,res)=>{const videos=localCatalog()||[],taxonomy=collectorTaxonomy(videos),counts=new Map<string,number>();for(const id of Object.values(taxonomy.assignments))counts.set(id,(counts.get(id)||0)+1);return ok(res,taxonomy.categories.map(item=>({...item,count:counts.get(item.id)||0})))});
 adminCollectorsRouter.post('/collectors/categories',(req,res)=>{const input=z.object({name:z.string().trim().min(1).max(30)}).strict().safeParse(req.body);if(!input.success)return res.status(400).json({error:{code:'VALIDATION_ERROR',message:'分类名称为1至30个字符'}});const created=createCollectorCategory(localCatalog()||[],input.data.name);if(!created)return res.status(409).json({error:{code:'CATEGORY_EXISTS',message:'分类名称已存在'}});res.status(201);return ok(res,created)});
 adminCollectorsRouter.patch('/collectors/categories/:id',(req,res)=>{const input=z.object({name:z.string().trim().min(1).max(30)}).strict().safeParse(req.body);if(!input.success)return res.status(400).json({error:{code:'VALIDATION_ERROR',message:'分类名称为1至30个字符'}});const result=renameCollectorCategory(localCatalog()||[],String(req.params.id),input.data.name);if(result==='exists')return res.status(409).json({error:{code:'CATEGORY_EXISTS',message:'分类名称已存在'}});if(!result)return res.status(404).json({error:{code:'NOT_FOUND',message:'分类不存在'}});return ok(res,result)});
 adminCollectorsRouter.delete('/collectors/categories/:id',(req,res)=>{if(!deleteCollectorCategory(localCatalog()||[],String(req.params.id)))return res.status(404).json({error:{code:'NOT_FOUND',message:'分类不存在'}});return ok(res,{deleted:true})});
+adminCollectorsRouter.post('/collectors/categories/:id/merge',(req,res)=>{const input=z.object({targetId:z.string().uuid()}).strict().safeParse(req.body);if(!input.success)return res.status(400).json({error:{code:'VALIDATION_ERROR',message:'目标分类无效'}});if(!mergeCollectorCategories(localCatalog()||[],String(req.params.id),input.data.targetId))return res.status(404).json({error:{code:'NOT_FOUND',message:'源分类或目标分类不存在'}});return ok(res,{merged:true})});
+adminCollectorsRouter.put('/collectors/categories/order',(req,res)=>{const input=z.object({ids:z.array(z.string().uuid())}).strict().safeParse(req.body);if(!input.success||!reorderCollectorCategories(localCatalog()||[],input.data.ids))return res.status(400).json({error:{code:'VALIDATION_ERROR',message:'分类排序参数无效'}});return ok(res,{updated:true})});
 adminCollectorsRouter.patch('/collectors/category-assignment',(req,res)=>{const input=z.object({ids:z.array(z.string()).min(1).max(1000),categoryId:z.string().uuid().nullable()}).strict().safeParse(req.body);if(!input.success)return res.status(400).json({error:{code:'VALIDATION_ERROR',message:'分类分配参数无效'}});if(!assignCollectorCategory(localCatalog()||[],input.data.ids,input.data.categoryId))return res.status(404).json({error:{code:'NOT_FOUND',message:'分类不存在'}});return ok(res,{updated:input.data.ids.length})});
 
 adminCollectorsRouter.get("/collectors/remote", async (req, res) => {
@@ -119,6 +123,7 @@ adminCollectorsRouter.get("/collectors/remote", async (req, res) => {
     page: z.coerce.number().int().min(1).max(100_000).default(1),
     keyword: z.string().trim().max(100).default(""),
     category: z.string().trim().max(100).default(""),
+    source: z.string().trim().max(50).default(""),
   }).safeParse(req.query);
   if (!input.success) return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "查询参数无效" } });
   try {
@@ -126,19 +131,20 @@ adminCollectorsRouter.get("/collectors/remote", async (req, res) => {
     if (catalog) {
       const keyword = input.data.keyword.toLocaleLowerCase();
       let filtered = keyword ? catalog.filter(video => `${video.title} ${video.description} ${video.tags.join(" ")}`.toLocaleLowerCase().includes(keyword)) : catalog;
+      if(input.data.source)filtered=filtered.filter(video=>video.externalSource?.sourceKey===input.data.source);
       const taxonomy=collectorTaxonomy(catalog),managedNames=new Map(taxonomy.categories.map(item=>[item.id,item.name]));
       const selectedCategory=taxonomy.categories.find(item=>item.id===input.data.category||item.name===input.data.category)?.id;
-      if(input.data.category)filtered=selectedCategory?filtered.filter(video=>taxonomy.assignments[video.externalSource!.remoteId]===selectedCategory):[];
-      const pageSize = 20, start = (input.data.page - 1) * pageSize;
-      const imported = new Set(videoRepository.list().filter(video => video.externalSource?.sourceKey === "hsckm3u8").map(video => video.externalSource!.remoteId));
+      if(input.data.category)filtered=selectedCategory?filtered.filter(video=>taxonomy.assignments[collectorVideoId(video)]===selectedCategory):[];
+      const pageSize = 20, start = (input.data.page - 1) * pageSize,sources=readDb().collectorSources;
+      const imported = new Set(videoRepository.list().filter(video => video.externalSource).map(video => `${video.externalSource!.sourceKey}~${video.externalSource!.remoteId}`));
       return ok(res, {
         page: input.data.page, pageCount: Math.max(1, Math.ceil(filtered.length / pageSize)), pageSize, total: filtered.length,
         items: filtered.slice(start, start + pageSize).map(video => {
-          const previews=readCollectorPreviews(video.externalSource!.remoteId);
+          const id=collectorVideoId(video),previewId=collectorPreviewId(video),previews=readCollectorPreviews(previewId),sourceKey=video.externalSource!.sourceKey;
           return {
-            remoteId: video.externalSource!.remoteId, title: video.title, category: managedNames.get(taxonomy.assignments[video.externalSource!.remoteId]) || "", categoryId: taxonomy.assignments[video.externalSource!.remoteId] || "",
+            id,remoteId: video.externalSource!.remoteId,sourceKey,sourceName:collectorSourceName(video,sources), title: video.title, category: managedNames.get(taxonomy.assignments[id]) || "", categoryId: taxonomy.assignments[id] || "",
             thumbnail: video.thumbnail, duration: video.duration > 1 ? String(video.duration) : "", updatedAt: video.externalSource?.remoteUpdatedAt || "",
-            remarks: "", playable: true, collected: true, imported: imported.has(video.externalSource!.remoteId),
+            remarks: "", playable: true, collected: true, imported: imported.has(`${sourceKey}~${video.externalSource!.remoteId}`),
             previewCount: previews.items.length, previewStatus: previews.status,
           };
         }),
@@ -167,12 +173,12 @@ adminCollectorsRouter.get("/collectors/remote", async (req, res) => {
 
 adminCollectorsRouter.get("/collectors/remote/:remoteId", (req, res) => {
   const catalog = localCatalog();
-  const video = catalog?.find(item => item.externalSource?.remoteId === String(req.params.remoteId));
+  const video = catalog?.find(item => collectorVideoId(item) === String(req.params.remoteId));
   if (!video) return res.status(404).json({ error: { code: "COLLECTED_VIDEO_NOT_FOUND", message: "采集资源不存在" } });
-  const imported = videoRepository.list().some(item => item.externalSource?.sourceKey === "hsckm3u8" && item.externalSource.remoteId === video.externalSource!.remoteId),taxonomy=collectorTaxonomy(catalog||[]),categoryId=taxonomy.assignments[video.externalSource!.remoteId]||"";
+  const imported = videoRepository.list().some(item => item.externalSource?.sourceKey === video.externalSource?.sourceKey && item.externalSource?.remoteId === video.externalSource!.remoteId),taxonomy=collectorTaxonomy(catalog||[]),categoryId=taxonomy.assignments[collectorVideoId(video)]||"";
   const trimmed = video.duration >= 70;
   return ok(res, {
-    remoteId: video.externalSource!.remoteId, title: video.title, description: video.description,
+    id:collectorVideoId(video),remoteId: video.externalSource!.remoteId,sourceKey:video.externalSource!.sourceKey,sourceName:collectorSourceName(video,readDb().collectorSources), title: video.title, description: video.description,
     thumbnail: video.thumbnail, playbackUrl: video.playbackUrl, duration: trimmed ? video.duration - 60 : video.duration,
     trimStart: trimmed ? 30 : 0, trimEnd: trimmed ? 30 : 0,
     category: taxonomy.categories.find(item=>item.id===categoryId)?.name || "", categoryId, tags: video.tags,
@@ -181,8 +187,8 @@ adminCollectorsRouter.get("/collectors/remote/:remoteId", (req, res) => {
   });
 });
 
-const catalogVideo=(remoteId:string)=>localCatalog()?.find(item=>item.externalSource?.remoteId===remoteId);
-const previewResponse=(req:AuthRequest,remoteId:string)=>{const metadata=readCollectorPreviews(remoteId);return{...metadata,items:metadata.items.map(item=>({...item,image:`${requestApiBase(req)}/admin/collectors/remote/${encodeURIComponent(remoteId)}/previews/${encodeURIComponent(item.file)}`}))}};
+const catalogVideo=(id:string)=>localCatalog()?.find(item=>collectorVideoId(item)===id);
+const previewResponse=(req:AuthRequest,id:string)=>{const video=catalogVideo(id),previewId=video?collectorPreviewId(video):id,metadata=readCollectorPreviews(previewId);return{...metadata,items:metadata.items.map(item=>({...item,image:`${requestApiBase(req)}/admin/collectors/remote/${encodeURIComponent(id)}/previews/${encodeURIComponent(item.file)}`}))}};
 adminCollectorsRouter.get('/collectors/preview-jobs',(_req,res)=>ok(res,collectorPreviewQueueStatus()));
 adminCollectorsRouter.post('/collectors/preview-jobs/control',(req,res)=>{
   const input=z.object({action:z.enum(['pause','resume','reset-stats'])}).safeParse(req.body);if(!input.success)return res.status(400).json({error:{code:'VALIDATION_ERROR',message:'任务操作无效'}});
@@ -191,8 +197,8 @@ adminCollectorsRouter.post('/collectors/preview-jobs/control',(req,res)=>{
 adminCollectorsRouter.post('/collectors/preview-jobs/batch',(req,res)=>{
   const input=z.object({ids:z.array(z.string()).max(1000).optional(),keyword:z.string().trim().max(100).optional(),limit:z.coerce.number().int().min(1).max(1000).default(500)}).safeParse(req.body);
   if(!input.success)return res.status(400).json({error:{code:'VALIDATION_ERROR',message:'批量截图参数无效'}});const catalog=localCatalog();if(!catalog)return res.status(409).json({error:{code:'CATALOG_NOT_READY',message:'本地采集目录尚未准备好'}});
-  const ids=input.data.ids?.length?new Set(input.data.ids):null,keyword=(input.data.keyword||'').toLocaleLowerCase();const candidates=catalog.filter(video=>(!ids||ids.has(video.externalSource?.remoteId||''))&&(!keyword||`${video.title} ${video.description} ${video.tags.join(' ')}`.toLocaleLowerCase().includes(keyword))).slice(0,input.data.limit);
-  let enqueued=0,skipped=0;for(const video of candidates){const remoteId=video.externalSource?.remoteId;if(!remoteId||readCollectorPreviews(remoteId).status==='ready'){skipped++;continue}const trimStart=video.duration>=70?30:0;if(generateCollectorPreviews(remoteId,video.playbackUrl,Math.max(1,video.duration-(trimStart?60:0)),trimStart,false,'normal'))enqueued++;else skipped++}
+  const ids=input.data.ids?.length?new Set(input.data.ids):null,keyword=(input.data.keyword||'').toLocaleLowerCase();const candidates=catalog.filter(video=>(!ids||ids.has(collectorVideoId(video)))&&(!keyword||`${video.title} ${video.description} ${video.tags.join(' ')}`.toLocaleLowerCase().includes(keyword))).slice(0,input.data.limit);
+  let enqueued=0,skipped=0;for(const video of candidates){const previewId=collectorPreviewId(video);if(readCollectorPreviews(previewId).status==='ready'){skipped++;continue}const trimStart=video.duration>=70?30:0;if(generateCollectorPreviews(previewId,video.playbackUrl,Math.max(1,video.duration-(trimStart?60:0)),trimStart,false,'normal'))enqueued++;else skipped++}
   res.status(202);return ok(res,{requested:candidates.length,enqueued,skipped,queue:collectorPreviewQueueStatus()});
 });
 adminCollectorsRouter.get('/collectors/remote/:remoteId/previews',(req,res)=>{
@@ -200,15 +206,15 @@ adminCollectorsRouter.get('/collectors/remote/:remoteId/previews',(req,res)=>{
 });
 adminCollectorsRouter.post('/collectors/remote/:remoteId/previews',(req,res)=>{
   const remoteId=String(req.params.remoteId),video=catalogVideo(remoteId);if(!video)return res.status(404).json({error:{code:'COLLECTED_VIDEO_NOT_FOUND',message:'采集资源不存在'}});
-  const trimStart=video.duration>=70?30:0,duration=Math.max(1,video.duration-(trimStart?60:0));generateCollectorPreviews(remoteId,video.playbackUrl,duration,trimStart,req.query.replace==='1');res.status(202);return ok(res,previewResponse(req,remoteId));
+  const trimStart=video.duration>=70?30:0,duration=Math.max(1,video.duration-(trimStart?60:0));generateCollectorPreviews(collectorPreviewId(video),video.playbackUrl,duration,trimStart,req.query.replace==='1');res.status(202);return ok(res,previewResponse(req,remoteId));
 });
 adminCollectorsRouter.delete('/collectors/remote/:remoteId/previews/:previewId',(req,res)=>{
   const remoteId=String(req.params.remoteId),video=catalogVideo(remoteId);if(!video)return res.status(404).json({error:{code:'COLLECTED_VIDEO_NOT_FOUND',message:'采集资源不存在'}});
-  if(!deleteCollectorPreview(remoteId,String(req.params.previewId)))return res.status(404).json({error:{code:'PREVIEW_NOT_FOUND',message:'预览截图不存在'}});
-  const trimStart=video.duration>=70?30:0;generateCollectorPreviews(remoteId,video.playbackUrl,Math.max(1,video.duration-(trimStart?60:0)),trimStart);return ok(res,previewResponse(req,remoteId));
+  const previewId=collectorPreviewId(video);if(!deleteCollectorPreview(previewId,String(req.params.previewId)))return res.status(404).json({error:{code:'PREVIEW_NOT_FOUND',message:'预览截图不存在'}});
+  const trimStart=video.duration>=70?30:0;generateCollectorPreviews(previewId,video.playbackUrl,Math.max(1,video.duration-(trimStart?60:0)),trimStart);return ok(res,previewResponse(req,remoteId));
 });
 adminCollectorsRouter.get('/collectors/remote/:remoteId/previews/:file',(req,res)=>{
-  const remoteId=String(req.params.remoteId),metadata=readCollectorPreviews(remoteId),name=path.basename(String(req.params.file)),directory=collectorPreviewDirectory(remoteId);
+  const remoteId=String(req.params.remoteId),video=catalogVideo(remoteId);if(!video)return res.status(404).end();const previewId=collectorPreviewId(video),metadata=readCollectorPreviews(previewId),name=path.basename(String(req.params.file)),directory=collectorPreviewDirectory(previewId);
   if(!directory||!metadata.items.some(item=>item.file===name))return res.status(404).end();const file=path.join(directory,name);if(!fs.existsSync(file))return res.status(404).end();
   res.type('image/webp').setHeader('Cache-Control','private, max-age=3600');return res.sendFile(file);
 });
@@ -219,19 +225,19 @@ adminCollectorsRouter.post("/collectors/import", async (req: AuthRequest, res) =
   try {
     const catalog = localCatalog();
     const payload = catalog
-      ? { list: catalog.filter(video => input.data.ids.includes(video.externalSource?.remoteId || "")) }
+      ? { list: catalog.filter(video => input.data.ids.includes(collectorVideoId(video))) }
       : await fetchRemote(`?ac=detail&ids=${encodeURIComponent(input.data.ids.join(","))}`);
-    const existing = new Set(videoRepository.list().filter(video => video.externalSource?.sourceKey === "hsckm3u8").map(video => video.externalSource!.remoteId));
+    const existing = new Set(videoRepository.list().filter(video => video.externalSource).map(video => `${video.externalSource!.sourceKey}~${video.externalSource!.remoteId}`));
     const result = { imported: 0, skipped: 0, failed: [] as { remoteId: string; reason: string }[] };
     for (const item of payload.list || []) {
       if (catalog) {
         const template = item as Video;
         const remoteId = template.externalSource!.remoteId;
-        if (existing.has(remoteId)) { result.skipped++; continue; }
+        const identity=`${template.externalSource!.sourceKey}~${remoteId}`;if (existing.has(identity)) { result.skipped++; continue; }
         const now = new Date().toISOString();
         const created=videoRepository.create({ ...template, id: randomUUID(), createdAt: now, externalSource: { ...template.externalSource!, importedAt: now } }, req.auth!.id);
         if(!adoptCollectorPreviews(created,req.auth!.id))generateMissingHighlights(created.id,created.playbackUrl,req.auth!.id);
-        existing.add(remoteId); result.imported++;
+        existing.add(identity); result.imported++;
         continue;
       }
       const remote = item as RemoteVod;

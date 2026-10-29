@@ -2,43 +2,39 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/icons/5k-video-app-icon-192.png" />
-    <link rel="apple-touch-icon" href="/icons/5k-video-app-icon-180.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#0b0b0c" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="screen-orientation" content="portrait" />
+    <meta name="x5-orientation" content="portrait" />
+    <meta name="x5-fullscreen" content="true" />
+    <meta name="browsermode" content="application" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="5K视频" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>5K视频 - 私人视频空间</title>
-    <meta name="description" content="5K视频 - 探索属于你的私人视频世界">
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>视频加载中</title>
+    <meta name="description" content="在线视频聚合平台，提供分类浏览、搜索与在线播放。" />
+    <meta name="keywords" content="在线视频,HLS视频,视频聚合" />
+    <link rel="canonical" href="https://5knews.wflhc.cn/" />
+    <meta property="og:title" content="在线视频平台" />
+    <meta property="og:description" content="在线视频观看与分类发现。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://5knews.wflhc.cn/" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.5.0/remixicon.min.css">
   <style>
-    #boot-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#151414;color:#faf9f9;font-family:Inter,system-ui,sans-serif;opacity:1;transition:opacity .35s ease;transform:translateZ(0)}
-    #boot-splash.boot-splash-exit{opacity:0;pointer-events:none}
-    #boot-splash-content{display:flex;flex-direction:column;align-items:center;gap:18px}
-    #boot-splash img{width:96px;height:96px;border-radius:24px;object-fit:cover;box-shadow:0 18px 45px rgba(225,45,55,.22)}
-    #boot-splash strong{font-size:28px;letter-spacing:.08em}
-    #boot-splash span{font-size:14px;color:#858181}
-    #boot-splash-bar{width:128px;height:2px;margin-top:4px;overflow:hidden;border-radius:99px;background:#292727}
-    #boot-splash-bar::after{content:"";display:block;width:45%;height:100%;border-radius:inherit;background:#e33b45;animation:boot-loading 1.1s ease-in-out infinite}
-    @keyframes boot-loading{from{transform:translateX(-110%)}to{transform:translateX(330%)}}
+    #boot-skeleton{max-width:520px;min-height:100vh;margin:auto;background:#fafafa;font-family:Arial,sans-serif}.boot-head{height:64px;background:#e2e8f0;display:flex;align-items:center;gap:10px;padding:0 12px}.boot-logo,.boot-search,.boot-app,.boot-pill,.boot-line,.boot-cover{background:#cbd5e1;border-radius:999px;animation:boot-pulse 1.4s ease-in-out infinite}.boot-logo{width:80px;height:36px;border-radius:9px}.boot-search{height:40px;flex:1;background:#cbd5e1}.boot-app{width:64px;height:32px}.boot-tabs{display:flex;gap:8px;overflow:hidden;padding:12px;border-bottom:1px solid #eee}.boot-pill{width:76px;height:32px;flex:none;background:#eee}.boot-pill:first-child{width:64px;background:#e2e8f0}.boot-title{display:flex;justify-content:space-between;padding:13px 12px}.boot-line{height:14px;width:96px;background:#eee}.boot-line.short{width:76px;height:26px}.boot-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 12px}.boot-card{overflow:hidden;border-radius:12px;background:#f5f5f5}.boot-cover{aspect-ratio:4/3;border-radius:0;background:#e5e7eb}.boot-card .boot-line{margin:9px 8px;width:calc(100% - 16px)}.boot-card .boot-line:last-child{width:60%;margin-bottom:12px}@keyframes boot-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+    #preboot{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:linear-gradient(145deg,#0b0d16,#221025 55%,#090b12);color:#fff;font-family:Arial,sans-serif;text-align:center}#preboot .ring{width:66px;height:66px;margin:0 auto 22px;border:3px solid rgba(255,255,255,.14);border-top-color:#ff68a6;border-radius:50%;animation:preboot-spin .9s linear infinite}#preboot strong{display:block;font-size:18px;letter-spacing:2px}#preboot .track{width:min(76vw,300px);height:7px;margin:18px auto 10px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.13)}#preboot .track i{display:block;height:100%;width:1%;border-radius:inherit;background:linear-gradient(90deg,#ff4c94,#ffb0d0);transition:width .1s ease}#preboot b{font-size:13px;color:rgba(255,255,255,.72)}@keyframes preboot-spin{to{transform:rotate(360deg)}}
   </style>
   </head>
   <body>
-    <div id="boot-splash" aria-label="5K视频正在加载">
-      <div id="boot-splash-content">
-        <img src="/icons/5k-video-app-icon-192.png" alt="5K视频" />
-        <strong>5K视频</strong>
-        <span>永久域名：5k.ag</span>
-        <div id="boot-splash-bar"></div>
-      </div>
-    </div>
-    <div id="root"></div>
+    <div id="preboot"><div><div class="ring"></div><strong>寻找最优线路中</strong><div class="track"><i id="preboot-bar"></i></div><b id="preboot-percent">1%</b></div></div>
+    <div id="root"><div id="boot-skeleton" aria-label="页面正在加载"><div class="boot-head"><div class="boot-logo"></div><div class="boot-search"></div><div class="boot-app"></div></div><div class="boot-tabs"><div class="boot-pill"></div><div class="boot-pill"></div><div class="boot-pill"></div><div class="boot-pill"></div><div class="boot-pill"></div></div><div class="boot-title"><div class="boot-line"></div><div class="boot-line short"></div></div><div class="boot-grid"><div class="boot-card"><div class="boot-cover"></div><div class="boot-line"></div><div class="boot-line"></div></div><div class="boot-card"><div class="boot-cover"></div><div class="boot-line"></div><div class="boot-line"></div></div><div class="boot-card"><div class="boot-cover"></div><div class="boot-line"></div><div class="boot-line"></div></div><div class="boot-card"><div class="boot-cover"></div><div class="boot-line"></div><div class="boot-line"></div></div></div></div></div>
+    <script>!function(){var n=1,t=setInterval(function(){var e=document.getElementById('preboot-percent'),r=document.getElementById('preboot-bar');if(!e||!r)return clearInterval(t);n=Math.min(96,n+(n<35?5:n<70?3:n<90?2:1));e.textContent=n+'%';r.style.width=n+'%'},90)}();</script>
     <script type="module" src="/src/main.tsx"></script>
+    <script>window.FiveKAdsConfig={apiBase:"https://897kg.cc/ads/api"};</script>
+    <script async src="https://897kg.cc/ads/sdk/fivek-ads.js"></script>
   </body>
 </html>

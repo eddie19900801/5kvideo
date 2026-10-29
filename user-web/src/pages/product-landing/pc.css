@@ -1,0 +1,15 @@
+.landing-pc{display:none}
+@media(min-width:769px){
+  .product-landing{max-width:none;margin:0;min-height:100vh;background:#08111b;box-shadow:none}
+  .landing-header,.landing-stage,.landing-dots,.landing-downloads{display:none}
+  .landing-pc{display:block;position:relative;width:100vw;height:100vh;overflow:hidden}.pc-background{position:absolute;z-index:0;inset:0;width:100%;height:100%;object-fit:cover}
+  .pc-logo{position:absolute;z-index:8;left:5.3vw;top:2.24vw;width:154px;height:50px;object-fit:contain}
+  .pc-girl{position:absolute;z-index:3;left:3vw;bottom:4.5vw;width:41.33vw;height:calc(100vh - 75px);object-fit:contain;object-position:center bottom}
+  .pc-sticker{position:absolute;z-index:4;left:1vw;bottom:25vw;width:49.33vw;height:50vh;object-fit:contain;object-position:center bottom}
+  .pc-table{position:absolute;z-index:5;left:0;bottom:0;width:53.04vw;height:10.9vw;object-fit:cover}
+  .pc-title{position:absolute;z-index:5;left:50.04vw;top:20.42vh;width:41.55vw;height:24.36vw;object-fit:contain}
+  .pc-actions{position:absolute;z-index:8;top:67.49vh;left:55.23vw;text-align:center;color:#fff}
+  .pc-actions button{display:inline-flex;align-items:center;justify-content:center;flex-direction:column;width:15vw;height:4.46vw;min-height:58px;margin:0 10px;border:0;border-radius:999px;color:#fff;background:linear-gradient(90deg,#11ca9f,#16eafd);cursor:pointer}
+  .pc-actions button b{font-size:1.46vw}.pc-actions button span{font-size:.8vw;margin-top:3px}.pc-actions p{font-size:1.02vw;line-height:1.6;margin:16px 0 0}
+  .pc-qr{position:absolute;z-index:9;left:30px;bottom:28px;display:flex;flex-direction:column;align-items:center;font-size:14px}.pc-qr img{width:130px;height:130px;border:5px solid #fff;border-radius:20px;margin-bottom:5px}
+}

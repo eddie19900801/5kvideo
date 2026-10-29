@@ -5,6 +5,7 @@ import { config } from '../config.js';
 import { extractFrame } from '../media.js';
 import { videoRepository } from '../db.js';
 import type { Video } from '../types.js';
+import { collectorPreviewId } from './collectorIdentity.js';
 import { highlightCountForDuration } from './highlightGenerator.js';
 import { storeLocalEncryptedImage } from './encryptedImageStorage.js';
 
@@ -65,7 +66,7 @@ export function deleteCollectorPreview(remoteId:string,previewId:string){
 }
 
 export function adoptCollectorPreviews(video:Video,adminId:string){
-  const remoteId=video.externalSource?.remoteId;if(!remoteId)return 0;const metadata=readStoredMetadata(remoteId),directory=collectorPreviewDirectory(remoteId);if(!directory||!metadata.items.length)return 0;
+  if(!video.externalSource?.remoteId)return 0;const remoteId=collectorPreviewId(video),metadata=readStoredMetadata(remoteId),directory=collectorPreviewDirectory(remoteId);if(!directory||!metadata.items.length)return 0;
   const highlights=metadata.items.filter(item=>fs.existsSync(path.join(directory,item.file))).map(item=>({id:randomUUID(),time:item.time,slot:item.slot,image:storeLocalEncryptedImage(path.join(directory,item.file),video.id,'image/webp'),source:'auto' as const,createdAt:new Date().toISOString()}));
   if(highlights.length)videoRepository.update(video.id,{highlights,highlightStatus:metadata.status==='ready'?'ready':'processing',highlightError:metadata.error},adminId);return highlights.length;
 }

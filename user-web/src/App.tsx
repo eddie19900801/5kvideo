@@ -1,23 +1,55 @@
-import { BrowserRouter } from 'react-router-dom';
-import { AppRoutes } from './router';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { VideoProvider } from '@/contexts/VideoContext';
-import { ModeProvider } from '@/contexts/ModeContext';
-import AppDownloadBanner from '@/components/feature/AppDownloadBanner';
+import { BrowserRouter, useLocation } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { AppRoutes } from "./router";
+import { I18nextProvider } from "react-i18next";
+import i18n from "./i18n";
+import { analytics } from "./services/analytics";
+import { performanceMonitor } from "./services/performance";
+import RecommendationNotice from "./components/RecommendationNotice";
+import AppDownloadFloating from "./components/AppDownloadFloating";
+import PageSkeleton from "./pages/home/components/PageSkeleton";
+import { productRuntime } from "./services/productRuntime";
+import type { ProductRuntime } from "./services/productRuntime";
+import ProductLandingPage from "./pages/product-landing/page";
+import HuangdouLandingPage from "./pages/huangdou-landing/page";
+import MadouLandingPage from "./pages/madou-landing/page";
+import HuangguoLandingPage from "./pages/huangguo-landing/page";
+import StartupLoading from "./components/StartupLoading";
+
+function AnalyticsTracker() {
+  const location = useLocation();
+  useEffect(() => { void analytics.appOpen(); performanceMonitor.init(); }, []);
+  useEffect(
+    () =>
+      analytics.track("page_view", { metadata: { path: location.pathname } }),
+    [location.pathname],
+  );
+  return null;
+}
 
 function App() {
-  return (
-    <AuthProvider>
-      <ModeProvider>
-        <VideoProvider>
-          <BrowserRouter basename={__BASE_PATH__}>
-            <AppRoutes />
-            <AppDownloadBanner />
-          </BrowserRouter>
-        </VideoProvider>
-      </ModeProvider>
-    </AuthProvider>
+  const [product, setProduct] = useState<ProductRuntime | null>(null);
+  const [bootVisible, setBootVisible] = useState(true);
+  useEffect(() => { void productRuntime.load().then(setProduct); }, []);
+  useEffect(() => { document.getElementById("preboot")?.remove(); }, []);
+  const hideBoot = useCallback(() => setBootVisible(false), []);
+  let content = <PageSkeleton />;
+  if (product?.hostMode === "landing" && product.slug === "91xueyuan") content = <ProductLandingPage product={product} />;
+  else if (product?.hostMode === "landing" && product.slug === "huangdou") content = <HuangdouLandingPage product={product} />;
+  else if (product?.hostMode === "landing" && product.slug === "madou") content = <MadouLandingPage product={product} />;
+  else if (product?.hostMode === "landing" && product.slug === "huangguo") content = <HuangguoLandingPage product={product} />;
+  else if (product?.hostMode === "landing" && product.landingPage === null) content = <main aria-label="落地页待配置" className="min-h-screen bg-white" />;
+  else if (product) content = (
+    <I18nextProvider i18n={i18n}>
+      <BrowserRouter basename={__BASE_PATH__}>
+        <AnalyticsTracker />
+        <AppRoutes />
+        <AppDownloadFloating />
+        <RecommendationNotice />
+      </BrowserRouter>
+    </I18nextProvider>
   );
+  return <>{content}{bootVisible && <StartupLoading ready={Boolean(product)} onDone={hideBoot} />}</>;
 }
 
 export default App;

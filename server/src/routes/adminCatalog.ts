@@ -1,14 +1,41 @@
 import { Router } from 'express';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { adminOnly, authenticate, type AuthRequest } from '../auth.js';
 import { readDb, updateDb, userRepository } from '../db.js';
 import { ok } from '../http.js';
+import { syncAllProductPackageManifests } from '../services/productPackages.js';
 
 export const adminCatalogRouter = Router();
 adminCatalogRouter.use(authenticate, adminOnly);
 
 adminCatalogRouter.get('/users', (_, res) => ok(res, userRepository.listManagedUsers()));
+
+adminCatalogRouter.get('/channels', (_, res) => {
+  const db = readDb();
+  return ok(res, [...db.channels].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+});
+
+adminCatalogRouter.post('/channels', (req: AuthRequest, res) => {
+  const input = z.object({ name: z.string().trim().min(1).max(50) }).strict().safeParse(req.body);
+  if (!input.success) return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: '请填写1至50个字符的渠道备注名' } });
+  let created: { id: string; code: string; name: string; createdAt: string } | undefined;
+  let exists = false;
+  updateDb(db => {
+    exists = db.channels.some(item => item.name.toLowerCase() === input.data.name.toLowerCase());
+    if (exists) return;
+    let code = '';
+    do code = `CH${randomBytes(5).toString('hex').toUpperCase()}`;
+    while (db.channels.some(item => item.code === code));
+    created = { id: randomUUID(), code, name: input.data.name, createdAt: new Date().toISOString() };
+    db.channels.push(created);
+    syncAllProductPackageManifests(db);
+    db.auditLogs.push({ id: randomUUID(), adminId: req.auth!.id, action: 'channel.create', targetId: created.id, createdAt: created.createdAt });
+  });
+  if (exists) return res.status(409).json({ error: { code: 'CHANNEL_EXISTS', message: '该渠道备注名已存在' } });
+  res.status(201);
+  return ok(res, created);
+});
 
 adminCatalogRouter.get('/tags', (_, res) => {
   const db = readDb();

@@ -1,4 +1,5 @@
 import type { AnalyticsEvent, Video } from '../types.js';
+import { collectorVideoId } from './collectorIdentity.js';
 
 const day = 86400000;
 export function crowdScores(events: AnalyticsEvent[], now = Date.now()) {
@@ -43,7 +44,7 @@ export function crowdScores(events: AnalyticsEvent[], now = Date.now()) {
 
 export function buildTopics(videos: Video[], taxonomy: { categories: { id: string; name: string }[]; assignments: Record<string, string> }, events: AnalyticsEvent[], now = Date.now()) {
   const scores = crowdScores(events, now), grouped = new Map<string, Video[]>();
-  const id = (video: Video) => video.externalSource?.remoteId || video.id;
+  const id = collectorVideoId;
   const known = new Set<string>();
   for (const video of videos) {
     if (known.has(id(video))) continue; known.add(id(video));

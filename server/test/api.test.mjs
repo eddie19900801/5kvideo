@@ -275,6 +275,90 @@ test('public metadata routes expose normalized tag usage without authentication'
   assert.ok(Array.isArray(chapterTags.payload.data));
 });
 
+test('product lines can be created, published and resolved by host', async () => {
+  const current = await api('/api/v1/product/runtime-config?host=5knews.wflhc.cn');
+  assert.equal(current.response.status, 200);
+  assert.equal(current.payload.data.slug, 'ppfree');
+
+  const adminLogin = await api('/api/v1/auth/login', {
+    method: 'POST', body: { account: 'admin', password: 'automated-admin-password' },
+  });
+  const token = adminLogin.payload.data.token;
+  const created = await api('/api/v1/admin/product-lines', {
+    method: 'POST', token,
+    body: {
+      name: '5K漫画',
+      slug: '5kcomic',
+      iconUrl: '',
+    },
+  });
+  assert.equal(created.response.status, 201);
+  assert.equal(created.payload.data.domain, '5kcomic.app.wflhc.cn');
+  assert.deepEqual(created.payload.data.domains, ['5kcomic.app.wflhc.cn']);
+  assert.equal(created.payload.data.packageName, 'cn.k897kg.p5kcomic');
+  assert.equal(created.payload.data.status, 'draft');
+  assert.equal(created.payload.data.version, 0);
+
+  const published = await api(`/api/v1/admin/product-lines/${created.payload.data.id}/publish`, {
+    method: 'POST', token,
+  });
+  assert.equal(published.response.status, 200);
+  assert.equal(published.payload.data.status, 'active');
+  assert.equal(published.payload.data.version, 1);
+
+  const runtime = await api('/api/v1/product/runtime-config?host=5kcomic.app.wflhc.cn');
+  assert.equal(runtime.response.status, 200);
+  assert.equal(runtime.payload.data.name, '5K漫画');
+  assert.equal(runtime.payload.data.packageName, 'cn.k897kg.p5kcomic');
+
+  const draft = await api(`/api/v1/admin/product-lines/${created.payload.data.id}`, {
+    method: 'PATCH', token,
+    body: { name: '5K漫画新版', recommendationKeywords: ['漫画', '动漫'], recommendationStrategy: 'stable' },
+  });
+  assert.equal(draft.response.status, 200);
+  assert.equal(draft.payload.data.name, '5K漫画新版');
+  const beforeRepublish = await api('/api/v1/product/runtime-config?host=5kcomic.app.wflhc.cn');
+  assert.equal(beforeRepublish.payload.data.name, '5K漫画');
+  assert.deepEqual(beforeRepublish.payload.data.recommendationKeywords, []);
+
+  await api(`/api/v1/admin/product-lines/${created.payload.data.id}/publish`, { method: 'POST', token });
+  const afterRepublish = await api('/api/v1/product/runtime-config?host=5kcomic.app.wflhc.cn');
+  assert.equal(afterRepublish.payload.data.name, '5K漫画新版');
+  assert.deepEqual(afterRepublish.payload.data.recommendationKeywords, ['漫画', '动漫']);
+
+  const packageRows = await api(`/api/v1/admin/product-lines/${created.payload.data.id}/packages`, { token });
+  assert.equal(packageRows.response.status, 200);
+  assert.equal(packageRows.payload.data[0].channel, 'direct');
+  assert.match(packageRows.payload.data[0].landingUrl, /5kcomic\.download\.wflhc\.cn\/\?channel=direct/);
+
+  const analytics = await api(`/api/v1/admin/product-lines/${created.payload.data.id}/analytics?days=7`, { token });
+  assert.equal(analytics.response.status, 200);
+  assert.equal(analytics.payload.data.productName, '5K漫画新版');
+  assert.equal(analytics.payload.data.daily.length, 7);
+  assert.ok(analytics.payload.data.channels.some(channel => channel.code === 'direct'));
+  assert.equal(typeof analytics.payload.data.overview.conversionRate, 'number');
+
+  const packageConfig = await api('/api/v1/products/5kcomic/channels/direct/config');
+  assert.equal(packageConfig.response.status, 200);
+  assert.equal(packageConfig.payload.data.name, '5K漫画新版');
+  assert.match(packageConfig.payload.data.navigationUrl, /channel=direct/);
+  const ios = await fetch(`${origin}/api/v1/products/5kcomic/channels/direct/ios.mobileconfig`);
+  assert.equal(ios.status, 200);
+  assert.match(ios.headers.get('content-type'), /application\/x-apple-aspen-config/);
+  assert.match(await ios.text(), /5K漫画新版/);
+  assert.equal((await api('/api/v1/products/5kcomic/channels/direct/android.apk')).response.status, 503);
+
+  const automaticPackage = await api('/api/v1/admin/product-lines', {
+    method: 'POST', token,
+    body: { name: '自动包名测试', slug: 'auto-package', iconUrl: '' },
+  });
+  assert.equal(automaticPackage.response.status, 201);
+  assert.equal(automaticPackage.payload.data.domain, 'auto-package.app.wflhc.cn');
+  assert.deepEqual(automaticPackage.payload.data.domains, ['auto-package.app.wflhc.cn']);
+  assert.equal(automaticPackage.payload.data.packageName, 'cn.k897kg.auto_package');
+  assert.match(automaticPackage.payload.data.themeColor, /^#[0-9a-f]{6}$/i);
+});
+
 test('playback URL issuance is rate limited', async () => {
   let limited = false;
   for (let attempt = 0; attempt < 70; attempt++) {

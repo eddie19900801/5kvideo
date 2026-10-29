@@ -18,19 +18,19 @@ test('catalog combines filters, sorts by import time, and preserves recommended 
     externalSource: { remoteId: id, sourceKey: 'test', importedAt: imported, remoteUpdatedAt: '2099-01-01T00:00:00Z' } });
   const videos = [make('1', 659, '2026-01-01T00:00:00Z'), make('2',660,'2026-01-02T00:00:00Z'), make('3',1859,'2026-01-03T00:00:00Z'), make('4',1860,'2026-01-04T00:00:00Z'), make('5',1,'2026-01-05T00:00:00Z')];
   await writeFile(path.join(directory,'collected-catalog.json'), JSON.stringify({ videos }));
-  await writeFile(path.join(directory,'collected-taxonomy.json'), JSON.stringify({ version:1, initialized:true, categories:[{id:'cat-a',name:'CategoryA',createdAt:'2026-01-01'},{id:'cat-b',name:'CategoryB',createdAt:'2026-01-01'}], assignments:{'1':'cat-a','2':'cat-a','3':'cat-b','4':'cat-a','5':'cat-a'} }));
+  await writeFile(path.join(directory,'collected-taxonomy.json'), JSON.stringify({ version:2, initialized:true, categories:[{id:'cat-a',name:'CategoryA',createdAt:'2026-01-01'},{id:'cat-b',name:'CategoryB',createdAt:'2026-01-01'}], assignments:{'test~1':'cat-a','test~2':'cat-a','test~3':'cat-b','test~4':'cat-a','test~5':'cat-a'}, sourceMappings:{CategoryA:'cat-a'}, ignoredSourceCategories:[] }));
   const { app } = await import('../dist/index.js');
   const server = await new Promise(resolve => { const instance = app.listen(0,'127.0.0.1',()=>resolve(instance)); });
   const base = `http://127.0.0.1:${server.address().port}/api/v1/collected-videos`;
   const query = async params => (await (await fetch(base+'?'+new URLSearchParams(params))).json()).data;
   try {
-    assert.deepEqual((await query({duration:'short'})).items.map(v=>v.id), ['1']);
-    assert.deepEqual((await query({duration:'medium'})).items.map(v=>v.id), ['2','3']);
-    assert.deepEqual((await query({duration:'long'})).items.map(v=>v.id), ['4']);
+    assert.deepEqual((await query({duration:'short'})).items.map(v=>v.id), ['test~1']);
+    assert.deepEqual((await query({duration:'medium'})).items.map(v=>v.id), ['test~2','test~3']);
+    assert.deepEqual((await query({duration:'long'})).items.map(v=>v.id), ['test~4']);
     const combined=await query({duration:'medium',category:'cat-a',q:'alpha',sort:'latest'});
-    assert.equal(combined.total,1); assert.equal(combined.items[0].duration,600);
-    assert.deepEqual((await query({sort:'latest'})).items.map(v=>v.id), ['5','4','3','2','1']);
-    assert.deepEqual((await query({})).items.map(v=>v.id), ['1','2','3','4','5']);
+    assert.equal(combined.total,2); assert.deepEqual(combined.items.map(item=>item.id),['test~3','test~2']);
+    assert.deepEqual((await query({sort:'latest'})).items.map(v=>v.id), ['test~5','test~4','test~3','test~2','test~1']);
+    assert.deepEqual((await query({})).items.map(v=>v.id), ['test~1','test~2','test~3','test~4','test~5']);
     assert.equal((await query({q:'missing',duration:'long'})).total,0);
     assert.equal((await fetch(base+'?duration=invalid')).status,400);
     const topics=(await (await fetch(base+'/topics')).json()).data;
@@ -41,9 +41,9 @@ test('catalog combines filters, sorts by import time, and preserves recommended 
     assert.deepEqual((await query({seed:'static-pool-0'})).items.map(v=>v.id), bootstrap.pools[0].items.map(v=>v.id));
     const first=await query({seed:'static-pool-0',pageSize:2,page:1}),second=await query({seed:'static-pool-0',pageSize:2,page:2});
     assert.equal(new Set([...first.items,...second.items].map(v=>v.id)).size,4);
-    const related=await query({relatedTo:'1',seed:'random'});
-    assert.deepEqual(related.items.map(v=>v.id),['2','4','5','3']);
-    const r1=await query({relatedTo:'1',pageSize:2,page:1}),r2=await query({relatedTo:'1',pageSize:2,page:2});
+    const related=await query({relatedTo:'test~1',seed:'random'});
+    assert.deepEqual(related.items.map(v=>v.id),['test~2','test~4','test~5','test~3']);
+    const r1=await query({relatedTo:'test~1',pageSize:2,page:1}),r2=await query({relatedTo:'test~1',pageSize:2,page:2});
     assert.deepEqual([...r1.items,...r2.items].map(v=>v.id),related.items.map(v=>v.id));
     assert.equal((await fetch(base+'?relatedTo=missing')).status,404);
   } finally {

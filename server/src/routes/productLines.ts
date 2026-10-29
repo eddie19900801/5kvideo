@@ -6,6 +6,8 @@ import { readDb, updateDb, updateDbDeferred } from "../db.js";
 import { ok } from "../http.js";
 import type { ProductLine } from "../types.js";
 import fs from "node:fs";
+import path from "node:path";
+import { collectorTaxonomy } from "../services/collectorTaxonomy.js";
 import { allPackageChannels, packageArtifact, packageLinks, syncProductPackageManifest } from "../services/productPackages.js";
 import { runProductDeployment } from "../services/productDeployment.js";
 
@@ -21,6 +23,7 @@ const themeColors=["#ef4444","#f97316","#eab308","#22c55e","#14b8a6","#3b82f6","
 const generatedDomains=(productSlug:string,bases:string[])=>bases.map(base=>`${productSlug}.app.${base}`);
 const generatedLandingDomains=(productSlug:string,bases:string[])=>bases.map(base=>`${productSlug}.download.${base}`);
 const packageNameForSlug=(productSlug:string)=>{const segment=productSlug.replace(/-/g,"_");return `cn.k897kg.${/^[a-z]/.test(segment)?segment:`p${segment}`}`};
+const defaultRecommendationCategoryIds=(terms:string[])=>{try{const file=path.join(path.dirname(path.resolve(process.env.DATA_FILE||"./data/db.json")),"collected-catalog.json");const payload=JSON.parse(fs.readFileSync(file,"utf8"));const keys=terms.map(value=>value.trim().toLowerCase()).filter(Boolean);return collectorTaxonomy(Array.isArray(payload.videos)?payload.videos:[]).categories.filter(item=>keys.some(key=>item.name.toLowerCase().includes(key)||key.includes(item.name.toLowerCase()))).slice(0,100).map(item=>item.id)}catch{return []}};
 const createSchema = z.object({
   name: z.string().trim().min(1).max(50),
   slug,
@@ -160,7 +163,10 @@ productLinesRouter.post("/admin/product-lines", (req: AuthRequest, res) => {
     if (db.productLines.some(item => item.domain === generatedDomain)) { conflict = "产品域名已存在"; return; }
     if (db.productLines.some(item => item.packageName.toLowerCase() === generatedPackageName.toLowerCase())) { conflict = "应用包名已存在"; return; }
     const now = new Date().toISOString();
-    created = { id: randomUUID(), ...input.data, domain: generatedDomain, domains, landingDomain:landingDomains[0], landingDomains, landingPage:null, packageName: generatedPackageName, themeColor, status: "draft", version: 0, createdAt: now, updatedAt: now };
+    const inheritedCategories = input.data.recommendationCategoryIds.length
+      ? input.data.recommendationCategoryIds
+      : defaultRecommendationCategoryIds(input.data.recommendationKeywords);
+    created = { id: randomUUID(), ...input.data, recommendationCategoryIds:[...inheritedCategories], domain: generatedDomain, domains, landingDomain:landingDomains[0], landingDomains, landingPage:null, packageName: generatedPackageName, themeColor, status: "draft", version: 0, createdAt: now, updatedAt: now };
     db.productLines.push(created);
     db.auditLogs.push({ id: randomUUID(), adminId: req.auth!.id, action: "product-line.create", targetId: created.id, createdAt: now });
   });

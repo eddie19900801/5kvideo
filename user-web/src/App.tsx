@@ -34,6 +34,7 @@ import ChengrenTiktok from "./pages/chengrentiktok-landing/page";
 import ChengrenKuaishou from "./pages/chengrenkuaishou-landing/page";
 import AnwangJinqu from "./pages/anwangjinqu-landing/page";
 import Chengse from "./pages/chengse-landing/page";
+import Xporn from "./pages/xporn-landing/page";
 import StartupLoading from "./components/StartupLoading";
 
 function AnalyticsTracker() {
@@ -76,6 +77,7 @@ function App() {
   else if (product?.hostMode === "landing" && product.slug === "chengrenkuaishou") content = <ChengrenKuaishou product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "anwangjinqu") content = <AnwangJinqu product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "chengse") content = <Chengse product={product} />;
+  else if (product?.hostMode === "landing" && product.slug === "xporn") content = <Xporn product={product} />;
   else if (product?.hostMode === "landing" && product.landingPage === null) content = <main aria-label="落地页待配置" className="min-h-screen bg-white" />;
   else if (product) content = (
     <I18nextProvider i18n={i18n}>

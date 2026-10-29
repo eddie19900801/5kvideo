@@ -5,6 +5,8 @@ import path from "node:path";
 
 const chrome = "E:\\playwright-browsers\\chromium-1187\\chrome-win\\chrome.exe";
 const desktop = process.argv.includes("--desktop");
+const clickDownload = process.argv.includes("--click-download");
+const android = process.argv.includes("--android");
 const targetUrl = process.argv.slice(2).find(value => !value.startsWith("--")) || "https://cdn-node-160401.mxdf4.com/?channel=IxCHwB";
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -53,7 +55,7 @@ try {
   const cdp = await connect(target.webSocketDebuggerUrl);
   const responses = [];
   cdp.on("Network.responseReceived", async event => {
-    if (!/landing-page|channel|config/i.test(event.response.url)) return;
+    if (!/landing-page|channel|config|\/plm\/|mobileconfig/i.test(event.response.url)) return;
     await delay(50);
     try {
       const body = await cdp.send("Network.getResponseBody", { requestId: event.requestId });
@@ -67,11 +69,17 @@ try {
     await cdp.send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false, screenWidth: 1440, screenHeight: 900 });
   } else {
     await cdp.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 3, mobile: true, screenWidth: 390, screenHeight: 844 });
-    await cdp.send("Network.setUserAgentOverride", { userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1", platform: "iPhone" });
+    await cdp.send("Network.setUserAgentOverride", android
+      ? { userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36", platform: "Android" }
+      : { userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1", platform: "iPhone" });
     await cdp.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
   }
   await cdp.send("Page.navigate", { url: targetUrl });
   await delay(7000);
+  if (clickDownload) {
+    await cdp.send("Runtime.evaluate", { expression: `document.querySelector('.btn,[data-track-key="download"],#android')?.click()` });
+    await delay(3000);
+  }
   const shot = await cdp.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
   await writeFile(desktop ? "replica-reference-desktop.png" : "replica-reference-mobile.png", Buffer.from(shot.data, "base64"));
   const page = await cdp.send("Runtime.evaluate", { returnByValue: true, expression: `JSON.stringify({url:location.href,title:document.title,text:document.body.innerText,html:document.body.innerHTML.slice(0,20000),elements:[...document.querySelectorAll('a,button,[data-clipboard-text]')].map(el=>({tag:el.tagName,text:(el.innerText||el.getAttribute('aria-label')||'').trim().slice(0,200),href:el.href||'',clipboard:el.getAttribute('data-clipboard-text')||'',id:el.id||'',className:typeof el.className==='string'?el.className:''})),resources:performance.getEntriesByType('resource').map(entry=>({url:entry.name,type:entry.initiatorType,duration:Math.round(entry.duration),size:entry.transferSize})).filter(entry=>/^https?:/.test(entry.url))})` });

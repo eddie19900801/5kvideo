@@ -19,6 +19,8 @@ import type { Category } from "@/types";
 import { usePagedVideos } from "@/hooks/usePagedVideos";
 import { productRuntime, type ProductRuntime } from "@/services/productRuntime";
 const HOME_POPUP_ZONE = "ZN_9A10DE603D56C91A63A196EF";
+const RECOMMEND_FREE_VIDEO_ZONE = "ZN_0C38DBB686590C25B234EAD5";
+const RECOMMEND_LIVE_CARD_ZONE = "ZN_5C9FAF269B6886186EBB85BD";
 const feedSessionKeys = {
   sort: "5knews_feed_sort",
   duration: "5knews_feed_duration",
@@ -143,7 +145,7 @@ export default function Home() {
     if (keyword) clearSearch();
     else setBatchPage((value) => (pageCount > 1 ? (value % pageCount) + 1 : 1));
   };
-  if (productReady && product && firstVideosReady) hasRendered.current = true;
+  if (productReady && product && (isRecommendRoute || firstVideosReady)) hasRendered.current = true;
   if (!productReady || !product || !hasRendered.current) return <PageSkeleton />;
   return (
     <div className="mx-auto min-h-screen w-full max-w-[520px] overflow-x-hidden bg-background-50 shadow-2xl shadow-black/5">
@@ -179,16 +181,33 @@ export default function Home() {
           </Link>
         </div>
       </header>
-      <div className="app-safe-tabs sticky z-10 border-b border-background-200 bg-background-50">
+      {!isRecommendRoute && <div className="app-safe-tabs sticky z-10 border-b border-background-200 bg-background-50">
         <CategoryTabs
           active={keyword ? "" : category}
           categories={categories}
           onChange={enterCategory}
         />
-      </div>
+      </div>}
+      {isRecommendRoute && <div className="px-3 pt-4 text-base font-bold text-foreground-900">广告推荐</div>}
       <NavigationBanner />
-      <FiveKAdSlot zone={HOME_POPUP_ZONE} limit={1} />
-      <main className="pb-24 pt-3">
+      {!isRecommendRoute && <FiveKAdSlot zone={HOME_POPUP_ZONE} limit={1} />}
+      {isRecommendRoute && <main className="space-y-4 px-3 pb-24 pt-4">
+        <section aria-label="免费看片">
+          <div className="mb-2 flex items-center justify-between">
+            <b className="text-sm text-foreground-800">免费看片</b>
+            <small className="text-[9px] text-foreground-400">广告</small>
+          </div>
+          <FiveKAdSlot zone={RECOMMEND_FREE_VIDEO_ZONE} limit={6} className="min-h-[180px]" />
+        </section>
+        <section aria-label="精彩真人直播">
+          <div className="mb-2 flex items-center justify-between">
+            <b className="text-sm text-foreground-800">精彩真人直播</b>
+            <small className="text-[9px] text-foreground-400">广告</small>
+          </div>
+          <FiveKAdSlot zone={RECOMMEND_LIVE_CARD_ZONE} limit={2} className="min-h-[260px] overflow-hidden rounded-xl bg-foreground-100/5" />
+        </section>
+      </main>}
+      {!isRecommendRoute && <main className="pb-24 pt-3">
         {!keyword && !category && <ContinueWatching />}
         {(category || keyword) && <button onClick={resetFilters} className="mb-3 ml-3 rounded-full bg-background-100 px-3 py-2 text-xs text-foreground-600">清除全部筛选</button>}
         {keyword && (
@@ -257,7 +276,7 @@ export default function Home() {
                 ? "已经到底了"
                 : ""}
         </div>
-      </main>
+      </main>}
       <SearchPanel
         open={searchOpen}
         product={product}

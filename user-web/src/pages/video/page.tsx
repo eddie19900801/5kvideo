@@ -234,8 +234,8 @@ export default function VideoDetail() {
         </div>
         <FiveKAdSlot
           zone={VIDEO_LIVE_CARD_ZONE}
-          limit={2}
-          className="min-h-[260px] overflow-hidden rounded-xl bg-foreground-100/5"
+          limit={4}
+          className="min-h-[520px] overflow-hidden rounded-xl bg-foreground-100/5"
         />
       </section>
       {showResume&&resumeProgress>=5&&<div role="status" className="mx-3 mt-3 flex items-center gap-2 rounded-xl border border-primary-100 bg-primary-50 px-3 py-2.5 text-xs text-primary-700">

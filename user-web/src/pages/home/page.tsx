@@ -204,7 +204,7 @@ export default function Home() {
             <b className="text-sm text-foreground-800">精彩真人直播</b>
             <small className="text-[9px] text-foreground-400">广告</small>
           </div>
-          <FiveKAdSlot zone={RECOMMEND_LIVE_CARD_ZONE} limit={2} className="min-h-[260px] overflow-hidden rounded-xl bg-foreground-100/5" />
+          <FiveKAdSlot zone={RECOMMEND_LIVE_CARD_ZONE} limit={4} className="min-h-[520px] overflow-hidden rounded-xl bg-foreground-100/5" />
         </section>
       </main>}
       {!isRecommendRoute && <main className="pb-24 pt-3">

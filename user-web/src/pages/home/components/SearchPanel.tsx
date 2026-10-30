@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { Category } from "@/types";
 import { videoApi } from "@/services/api";
+import EncryptedAssetImage, { productIconSource } from "@/components/EncryptedAssetImage";
+import type { ProductRuntime } from "@/services/productRuntime";
 const defaultHotTags = ["动漫", "国产", "欧美"];
 const recentSearchKey = "5knews_recent_searches",
   recentSearchLimit = 10;
@@ -13,6 +15,7 @@ interface SearchPanelProps {
   onTagSelect: (tag: string) => void;
   categories: Category[];
   onCategorySelect: (id: string) => void;
+  product: ProductRuntime;
 }
 
 export default function SearchPanel({
@@ -23,6 +26,7 @@ export default function SearchPanel({
   onTagSelect,
   categories,
   onCategorySelect,
+  product,
 }: SearchPanelProps) {
   const [draft, setDraft] = useState(keyword);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -113,15 +117,15 @@ export default function SearchPanel({
   return (
     <div className="safe-panel fixed bottom-0 left-1/2 top-0 z-[60] flex w-full max-w-[520px] -translate-x-1/2 flex-col bg-background-950 shadow-2xl">
       {/* 搜索头部 */}
-      <div className="flex items-center gap-2.5 px-3 py-3">
+      <div className="flex items-center gap-2.5 px-3 py-3" style={{ background: `linear-gradient(180deg, ${product.themeColor}, ${product.themeColor}dd)` }}>
         {/* 品牌 */}
         <div className="flex flex-none flex-col items-center">
           <div className="flex items-center gap-1">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-background-50/15 text-background-50">
-              <i className="ri-play-mini-fill text-lg"></i>
+            <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-background-50/15 text-background-50">
+              {productIconSource(product.slug, product.iconUrl) ? <EncryptedAssetImage src={productIconSource(product.slug, product.iconUrl)} alt={product.name} className="h-full w-full object-cover" /> : <i className="ri-play-mini-fill text-lg"></i>}
             </span>
             <span className="font-heading text-[15px] font-extrabold tracking-wide text-background-50">
-              PP免费
+              {product.name}
             </span>
           </div>
           <span className="whitespace-nowrap text-[9px] font-bold text-background-50/50">
@@ -149,7 +153,8 @@ export default function SearchPanel({
           />
           <button
             type="submit"
-            className="flex flex-none cursor-pointer items-center gap-1 rounded-full bg-primary-500 px-4 py-1.5 text-xs font-bold text-background-50 transition-colors hover:bg-primary-600"
+            style={{ backgroundColor: product.themeColor }}
+            className="flex flex-none cursor-pointer items-center gap-1 rounded-full px-4 py-1.5 text-xs font-bold text-background-50 transition-opacity hover:opacity-90"
           >
             搜索
           </button>
@@ -211,9 +216,10 @@ export default function SearchPanel({
                   onClick={() => handleTagClick(tag)}
                   className={`cursor-pointer rounded-lg px-2 py-2 text-center text-xs font-medium leading-tight transition-colors ${
                     isActive
-                      ? "bg-primary-500 text-background-50"
+                      ? "text-background-50"
                       : "bg-background-50/10 text-background-50/80 hover:bg-background-50/20"
                   }`}
+                  style={isActive ? { backgroundColor: product.themeColor } : undefined}
                 >
                   {tag}
                 </button>

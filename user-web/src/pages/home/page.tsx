@@ -260,6 +260,7 @@ export default function Home() {
       </main>
       <SearchPanel
         open={searchOpen}
+        product={product}
         keyword={keyword}
         categories={categories}
         onCategorySelect={enterCategory}

@@ -24,6 +24,7 @@ import Lolita from "./pages/lolita-landing/page";
 import SmCommunity from "./pages/smcommunity-landing/page";
 import DarkDouyin from "./pages/dark-douyin-landing/page";
 import Bilio from "./pages/bilio-landing/page";
+import BilioInstallGuide from "./pages/bilio-landing/install-guide";
 import Short91 from "./pages/short91-landing/page";
 import DouyinLanding from "./pages/douyin-landing/page";
 import Seventeen from "./pages/seventeen-landing/page";
@@ -64,7 +65,7 @@ function AnalyticsTracker() {
 function App() {
   const [product, setProduct] = useState<ProductRuntime | null>(null);
   const [bootVisible, setBootVisible] = useState(true);
-  const isInstallationPage = ["/ios-installation.html", "/ios.html", "/android-installation.html"].includes(location.pathname);
+  const isInstallationPage = ["/ios-installation.html", "/ios.html", "/android-installation.html", "/h5-install"].includes(location.pathname);
   useEffect(() => { void productRuntime.load().then(setProduct); }, []);
   useEffect(() => { document.getElementById("preboot")?.remove(); }, []);
   const hideBoot = useCallback(() => setBootVisible(false), []);
@@ -79,7 +80,7 @@ function App() {
   else if (product?.hostMode === "landing" && product.slug === "lolidao") content = <Lolita product={product} />;
   else if (product?.hostMode === "landing" && (product.slug === "smshequ" || product.slug === "smcommunity")) content = <SmCommunity product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "anheidouyin18") content = <DarkDouyin product={product} />;
-  else if (product?.hostMode === "landing" && product.slug === "bilio3") content = <Bilio product={product} />;
+  else if (product?.hostMode === "landing" && product.slug === "bilio3") content = location.pathname === "/h5-install" ? <BilioInstallGuide product={product} /> : <Bilio product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "91duanship") content = <Short91 product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "douyin") content = <DouyinLanding product={product} />;
   else if (product?.hostMode === "landing" && product.slug === "17sui") content = <Seventeen product={product} />;

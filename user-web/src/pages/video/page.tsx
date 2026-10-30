@@ -15,6 +15,7 @@ import { productRuntime } from "@/services/productRuntime";
 import BottomNav from "@/components/base/BottomNav";
 const VIDEO_BANNER_ZONE = "ZN_A1BD01D65B6E249A60AB5A26";
 const VIDEO_RECOMMENDATION_ZONE = "ZN_584774055B2DC9702C87750C";
+const VIDEO_LIVE_CARD_ZONE = "ZN_5C9FAF269B6886186EBB85BD";
 const progressTime=(value:number)=>`${Math.floor(value/60)}:${String(Math.floor(value%60)).padStart(2,"0")}`;
 export default function VideoDetail() {
   const { id = "" } = useParams(),
@@ -226,6 +227,17 @@ export default function VideoDetail() {
           }
         }}
       />
+      <section className="px-3 pt-3" aria-label="精彩真人直播">
+        <div className="mb-2 flex items-center justify-between">
+          <b className="text-sm text-foreground-800">精彩真人直播</b>
+          <small className="text-[9px] text-foreground-400">广告</small>
+        </div>
+        <FiveKAdSlot
+          zone={VIDEO_LIVE_CARD_ZONE}
+          limit={2}
+          className="min-h-[260px] overflow-hidden rounded-xl bg-foreground-100/5"
+        />
+      </section>
       {showResume&&resumeProgress>=5&&<div role="status" className="mx-3 mt-3 flex items-center gap-2 rounded-xl border border-primary-100 bg-primary-50 px-3 py-2.5 text-xs text-primary-700">
         <i className="ri-history-line text-lg"/>
         <span className="min-w-0 flex-1">上次看到 {progressTime(resumeProgress)}</span>

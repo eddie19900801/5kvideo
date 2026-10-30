@@ -90,6 +90,36 @@ body {
   overflow-x: clip;
 }
 
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+.safe-top { padding-top: var(--safe-top); }
+.safe-bottom { padding-bottom: var(--safe-bottom); }
+.safe-x { padding-left: var(--safe-left); padding-right: var(--safe-right); }
+.app-safe-header {
+  padding-top: max(.625rem, var(--safe-top));
+  padding-left: max(.75rem, var(--safe-left));
+  padding-right: max(.75rem, var(--safe-right));
+}
+.app-safe-tabs { top: calc(64px + var(--safe-top)); }
+.safe-panel {
+  padding-top: var(--safe-top);
+  padding-right: var(--safe-right);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .app-safe-header {
+    padding-left: max(.75rem, calc(var(--safe-left) + .5rem));
+    padding-right: max(.75rem, calc(var(--safe-right) + .5rem));
+  }
+  .app-safe-tabs { top: calc(58px + var(--safe-top)); }
+}
+*:fullscreen ~ .app-bottom-nav { display: none; }
+
 header button.flex-1 { min-width: 0; }
 @media (max-width: 440px) {
   header .gap-2\.5 { gap: .4rem; }

@@ -111,7 +111,7 @@ export default function SearchPanel({
   };
 
   return (
-    <div className="fixed bottom-0 left-1/2 top-0 z-30 flex w-full max-w-[520px] -translate-x-1/2 flex-col bg-background-950 shadow-2xl">
+    <div className="safe-panel fixed bottom-0 left-1/2 top-0 z-[60] flex w-full max-w-[520px] -translate-x-1/2 flex-col bg-background-950 shadow-2xl">
       {/* 搜索头部 */}
       <div className="flex items-center gap-2.5 px-3 py-3">
         {/* 品牌 */}

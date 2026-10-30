@@ -3,13 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { library, type HistoryItem, type FavoriteItem, type FavoriteGroup } from "@/services/library";
 import FavoriteGroups from "@/components/FavoriteGroups";
 import HiddenVideos from "@/components/HiddenVideos";
+import BottomNav from "@/components/base/BottomNav";
 
 const time = (value: number) =>
   `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, "0")}`;
 
-export default function Profile() {
+export default function Profile({ initialTab = "history" }: { initialTab?: "history" | "favorites" }) {
   const navigate = useNavigate(),
-    [tab, setTab] = useState<"history" | "favorites">("history"),
+    [tab, setTab] = useState<"history" | "favorites">(initialTab),
     [history, setHistory] = useState<HistoryItem[]>([]),
     [favorites, setFavorites] = useState<FavoriteItem[]>([]),
     [query, setQuery] = useState(""),
@@ -44,8 +45,8 @@ export default function Profile() {
     return !keyword || `${item.title} ${item.category} ${item.tags.join(" ")}`.toLocaleLowerCase().includes(keyword);
   });
   return (
-    <div className="mx-auto min-h-screen w-full max-w-[520px] bg-background-50">
-      <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-background-200 bg-background-50/95 px-3 py-2.5 backdrop-blur">
+    <div className="mx-auto min-h-screen w-full max-w-[520px] bg-background-50 pb-20">
+      <header className="app-safe-header sticky top-0 z-20 flex items-center gap-3 border-b border-background-200 bg-background-50/95 px-3 py-2.5 backdrop-blur">
         <button
           onClick={() => navigate(-1)}
           className="grid h-9 w-9 place-items-center rounded-full bg-background-100"
@@ -175,6 +176,7 @@ export default function Profile() {
           </Link>
         </div>
       )}
+      <BottomNav />
     </div>
   );
 }

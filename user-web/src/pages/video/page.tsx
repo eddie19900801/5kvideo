@@ -12,6 +12,7 @@ import { analytics } from "@/services/analytics";
 import ContentFeedback from "@/components/ContentFeedback";
 import { usePagedVideos } from "@/hooks/usePagedVideos";
 import { productRuntime } from "@/services/productRuntime";
+import BottomNav from "@/components/base/BottomNav";
 const VIDEO_BANNER_ZONE = "ZN_A1BD01D65B6E249A60AB5A26";
 const VIDEO_RECOMMENDATION_ZONE = "ZN_584774055B2DC9702C87750C";
 const progressTime=(value:number)=>`${Math.floor(value/60)}:${String(Math.floor(value%60)).padStart(2,"0")}`;
@@ -113,8 +114,8 @@ export default function VideoDetail() {
       </div>
     );
   return (
-    <div className="mx-auto min-h-screen w-full max-w-[520px] bg-background-50">
-      <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-background-200 bg-background-50/95 px-3 py-2.5 backdrop-blur">
+    <div className="mx-auto min-h-screen w-full max-w-[520px] bg-background-50 pb-20">
+      <header className="app-safe-header sticky top-0 z-20 flex items-center gap-3 border-b border-background-200 bg-background-50/95 px-3 py-2.5 backdrop-blur">
         <button
           onClick={() => navigate(-1)}
           className="grid h-9 w-9 place-items-center rounded-full bg-background-100"
@@ -304,6 +305,7 @@ export default function VideoDetail() {
           </div>
         </section>
       </main>
+      <BottomNav />
     </div>
   );
 }

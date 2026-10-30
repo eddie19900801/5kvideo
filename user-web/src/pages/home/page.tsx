@@ -10,6 +10,7 @@ import NavigationBanner from "./components/NavigationBanner";
 import FiveKAdSlot from "@/components/FiveKAdSlot";
 import ContinueWatching from "@/components/ContinueWatching";
 import EncryptedAssetImage, { productIconSource } from "@/components/EncryptedAssetImage";
+import BottomNav from "@/components/base/BottomNav";
 import { videoApi } from "@/services/api";
 import { analytics } from "@/services/analytics";
 import { feedCache } from "@/services/feedCache";
@@ -50,18 +51,19 @@ const recommendationSeed = () => {
 };
 export default function Home() {
   const params = useRef(new URLSearchParams(window.location.search)).current;
-  const hasUrlFilters = ["q", "keyword", "search", "category", "sort", "duration"].some(key => params.has(key));
+  const isRecommendRoute = window.location.pathname === "/recommend";
+  const hasUrlFilters = isRecommendRoute || ["q", "keyword", "search", "category", "sort", "duration"].some(key => params.has(key));
   const hasRendered = useRef(false);
   const initialUrlKeyword = useRef(readUrlKeyword()).current;
   const initialUrlCategory = useRef(readUrlCategory()).current;
   const initialBatchPage=useRef(hasUrlFilters || readSession(feedSessionKeys.sort) === "latest" || ["short", "medium", "long"].includes(readSession(feedSessionKeys.duration)) ? 1 : Math.max(1,Number(readSession(feedSessionKeys.batchPage))||1)).current;
-  const initialCategory=initialUrlCategory||(hasUrlFilters?"":readSession(feedSessionKeys.category));
+  const initialCategory=isRecommendRoute?"":initialUrlCategory||(hasUrlFilters?"":readSession(feedSessionKeys.category));
   const initialCategories=useRef(feedCache.categories()).current;
   const [category, setCategory] = useState(() =>
       initialCategory,
     ),
     [keyword, setKeyword] = useState(() =>
-      initialUrlKeyword || (hasUrlFilters ? "" : readSession(feedSessionKeys.keyword)),
+      isRecommendRoute ? "" : initialUrlKeyword || (hasUrlFilters ? "" : readSession(feedSessionKeys.keyword)),
     ),
     [categories, setCategories] = useState<Category[]>(initialCategories),
     [batchPage, setBatchPage] = useState(initialBatchPage),
@@ -145,7 +147,7 @@ export default function Home() {
   if (!productReady || !product || !hasRendered.current) return <PageSkeleton />;
   return (
     <div className="mx-auto min-h-screen w-full max-w-[520px] overflow-x-hidden bg-background-50 shadow-2xl shadow-black/5">
-      <header className="sticky top-0 z-20 px-3 py-3" style={{ background: `linear-gradient(180deg, ${product.themeColor}, ${product.themeColor}dd)` }}>
+      <header className="app-safe-header sticky top-0 z-20 px-3 py-3" style={{ background: `linear-gradient(180deg, ${product.themeColor}, ${product.themeColor}dd)` }}>
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex min-w-0 flex-none items-center gap-1.5 text-white">
             <span className="grid h-8 w-8 place-items-center overflow-hidden rounded-lg bg-white/20">
@@ -177,7 +179,7 @@ export default function Home() {
           </Link>
         </div>
       </header>
-      <div className="sticky top-[64px] z-10 border-b border-background-200 bg-background-50">
+      <div className="app-safe-tabs sticky z-10 border-b border-background-200 bg-background-50">
         <CategoryTabs
           active={keyword ? "" : category}
           categories={categories}
@@ -279,6 +281,7 @@ export default function Home() {
           setSearchOpen(false);
         }}
       />
+      <BottomNav />
     </div>
   );
 }

@@ -4,5 +4,5 @@ admin_id="$(docker exec 5kvideo-api node --input-type=module -e 'const {initiali
 token="$(docker exec -e A="$admin_id" 5kvideo-api node -e 'const j=require("jsonwebtoken");process.stdout.write(j.sign({id:process.env.A,role:"admin"},process.env.JWT_SECRET,{expiresIn:"10m"}))')"
 base=http://127.0.0.1:4010/api/v1
 id="$(curl -fsS "$base/admin/product-lines" -H "Authorization: Bearer $token"|jq -r '.data[]|select(.slug=="chengrentiktok")|.id')"
-curl -fsS -X PATCH "$base/admin/product-lines/$id" -H "Authorization: Bearer $token" -H 'Content-Type: application/json' --data '{"iconUrl":"https://spovhe.cn/v1/assets/landing/fe728bbc-b4fb-4563-821f-a993e7031397.enc"}'
+curl -fsS -X PATCH "$base/admin/product-lines/$id" -H "Authorization: Bearer $token" -H 'Content-Type: application/json' --data '{"iconUrl":"https://spovhe.cn/v1/assets/landing/133265a0-b549-4f3f-9ac6-6cdc5ce94834.enc"}'
 curl -fsS -X POST "$base/admin/product-lines/$id/publish" -H "Authorization: Bearer $token"

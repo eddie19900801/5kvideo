@@ -12,6 +12,7 @@ drawable_dir="$project/app/src/main/res/drawable"
 mkdir -p "$manifest_dir" /root/5kvideo-release/server/data/product-packages "$icon_dir"
 shopt -s nullglob
 target_slug="${1:-}"
+template_version="fullscreen-video-v2"
 for manifest in "$manifest_dir"/*.json; do
   while IFS=$'\t' read -r version slug name_b64 package domain channel artifact; do
     if [[ -n "$target_slug" && "$slug" != "$target_slug" ]]; then continue; fi
@@ -20,7 +21,8 @@ for manifest in "$manifest_dir"/*.json; do
       artifact="/root/5kvideo-release/server/data/${artifact#/app/data/}"
     fi
     marker="${artifact}.version"
-    if [[ -s "$artifact" && -f "$marker" && "$(cat "$marker")" == "$version" ]]; then continue; fi
+    build_version="$version:$template_version"
+    if [[ -s "$artifact" && -f "$marker" && "$(cat "$marker")" == "$build_version" ]]; then continue; fi
     mkdir -p "$(dirname "$artifact")"
     if [[ -s "$icon_dir/$slug.png" ]]; then
       rm -f "$drawable_dir/app_icon.xml" "$drawable_dir/app_icon.webp"
@@ -37,7 +39,7 @@ for manifest in "$manifest_dir"/*.json; do
       "-PproductPackage=$package" "-PproductDomain=$domain" \
       "-PapiBase=https://897kg.cc/vdo/api/v1"
     install -m 0644 "$project/app/build/outputs/apk/release/app-release.apk" "$artifact"
-    printf '%s' "$version" > "$marker"
+    printf '%s' "$build_version" > "$marker"
   done < <(python3 - "$manifest" <<'PY'
 import base64,json,sys
 d=json.load(open(sys.argv[1],encoding='utf-8')); c=d['config']

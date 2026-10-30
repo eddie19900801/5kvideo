@@ -1,6 +1,7 @@
 package cn.ppfree.video
 
 import android.annotation.SuppressLint
+import android.content.pm.ActivityInfo
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -26,7 +27,10 @@ import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
+    private lateinit var rootView: FrameLayout
     private lateinit var launchScreen: View
+    private var fullscreenView: View? = null
+    private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
     private val channel = BuildConfig.CHANNEL_CODE
     private val configUrl get() = "${BuildConfig.API_BASE}/products/${BuildConfig.PRODUCT_SLUG}/channels/$channel/config?_=${System.currentTimeMillis()}"
     private val fallbackUrl get() = "https://${BuildConfig.PRODUCT_DOMAIN}/?channel=$channel&app_platform=android"
@@ -55,16 +59,42 @@ class MainActivity : AppCompatActivity() {
                     return openExternally(uri)
                 }
             }
-            webChromeClient = WebChromeClient()
+            webChromeClient = object : WebChromeClient() {
+                override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                    if (view == null) {
+                        callback?.onCustomViewHidden()
+                        return
+                    }
+                    if (fullscreenView != null) {
+                        callback?.onCustomViewHidden()
+                        return
+                    }
+                    fullscreenView = view
+                    fullscreenCallback = callback
+                    webView.visibility = View.GONE
+                    this@MainActivity.rootView.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+                    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                    window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or
+                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                        View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                }
+
+                override fun onHideCustomView() {
+                    closeFullscreenVideo()
+                }
+            }
             setDownloadListener(DownloadListener { url, _, _, _, _ -> openExternally(Uri.parse(url)) })
         }
-        val root = FrameLayout(this).apply {
+        rootView = FrameLayout(this).apply {
             setBackgroundColor(Color.rgb(11, 13, 22))
             addView(webView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             launchScreen = createLaunchScreen()
             addView(launchScreen, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
-        setContentView(root)
+        setContentView(rootView)
         loadRemoteConfig()
     }
 
@@ -134,6 +164,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openExternally(uri: Uri): Boolean = try { startActivity(Intent(Intent.ACTION_VIEW, uri)); true } catch (_: Exception) { false }
-    @Deprecated("Deprecated in Java") override fun onBackPressed() { if (webView.canGoBack()) webView.goBack() else super.onBackPressed() }
-    override fun onDestroy() { webView.destroy(); super.onDestroy() }
+    private fun closeFullscreenVideo() {
+        val view = fullscreenView ?: return
+        rootView.removeView(view)
+        fullscreenView = null
+        webView.visibility = View.VISIBLE
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        fullscreenCallback?.onCustomViewHidden()
+        fullscreenCallback = null
+    }
+    @Deprecated("Deprecated in Java") override fun onBackPressed() {
+        if (fullscreenView != null) closeFullscreenVideo()
+        else if (webView.canGoBack()) webView.goBack()
+        else super.onBackPressed()
+    }
+    override fun onDestroy() { if (fullscreenView != null) closeFullscreenVideo(); webView.destroy(); super.onDestroy() }
 }

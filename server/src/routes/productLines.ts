@@ -185,6 +185,28 @@ productLinesRouter.patch("/admin/product-lines/:id", (req: AuthRequest, res) => 
   if (!updated) return res.status(404).json({ error: { code: "NOT_FOUND", message: "产品不存在" } });
   return ok(res, adminValue(updated));
 });
+productLinesRouter.delete("/admin/product-lines/:id", (req: AuthRequest, res) => {
+  let removed: ProductLine | undefined;
+  updateDb(db => {
+    const index = db.productLines.findIndex(product => product.id === req.params.id);
+    if (index < 0) return;
+    const now = new Date().toISOString();
+    [removed] = db.productLines.splice(index, 1);
+    db.auditLogs.push({ id: randomUUID(), adminId: req.auth!.id, action: "product-line.delete", targetId: removed.id, createdAt: now });
+  });
+  if (!removed) return res.status(404).json({ error: { code: "NOT_FOUND", message: "产品不存在或已经删除" } });
+  const dataRoot = path.dirname(path.resolve(process.env.DATA_FILE || "./data/db.json"));
+  const packageRoot = path.resolve(dataRoot, "product-packages");
+  const packageTarget = path.resolve(packageRoot, removed.slug);
+  const relativePackage = path.relative(packageRoot, packageTarget);
+  if (relativePackage && !relativePackage.startsWith("..") && !path.isAbsolute(relativePackage)) fs.rmSync(packageTarget, { recursive: true, force: true });
+  const manifestRoot = path.resolve(dataRoot, "product-package-manifests");
+  const manifestTarget = path.resolve(manifestRoot, `${removed.slug}.json`);
+  const relativeManifest = path.relative(manifestRoot, manifestTarget);
+  if (relativeManifest && !relativeManifest.startsWith("..") && !path.isAbsolute(relativeManifest)) fs.rmSync(manifestTarget, { force: true });
+  landingAnalyticsCache.clear();
+  return ok(res, { id: removed.id, name: removed.name, deleted: true });
+});
 productLinesRouter.post("/admin/product-lines/:id/publish", async (req: AuthRequest, res) => {
   let updated: ProductLine | undefined;
   updateDb(db => { const item = db.productLines.find(product => product.id === req.params.id); if (!item) return; const now = new Date().toISOString(); item.status = "active"; item.version += 1; item.publishedAt = now; item.updatedAt = now; item.publishedConfig = { name: item.name, domain: item.domain, domains:[...item.domains], landingDomain:item.landingDomain, landingDomains:[...item.landingDomains], landingPage:item.landingPage, packageName: item.packageName, iconUrl: item.iconUrl, themeColor: item.themeColor, recommendationCategoryIds: [...item.recommendationCategoryIds], recommendationKeywords: [...item.recommendationKeywords], recommendationVideoIds: [], recommendationStrategy: item.recommendationStrategy }; syncProductPackageManifest(db, item); updated = item; db.auditLogs.push({ id: randomUUID(), adminId: req.auth!.id, action: "product-line.publish", targetId: item.id, createdAt: now }); });
